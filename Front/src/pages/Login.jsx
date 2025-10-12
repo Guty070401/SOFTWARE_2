@@ -1,46 +1,60 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/useAuthStore";
+import React from "react";
+import { Link, Navigate } from "react-router-dom";
+import appState from "../oop/state/AppState";
+import { EVENTS } from "../oop/state/events";
 
-export default function Login() {
-  const navigate = useNavigate();
-  const login = useAuthStore(s => s.login);
+export default class Login extends React.Component {
+  state = { email: "", pass: "", logged: false };
 
-  function handleSubmit(e){
+  componentDidMount(){
+    this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => {
+      if (u) this.setState({ logged: true });
+    });
+  }
+  componentWillUnmount(){ this.unsub && this.unsub(); }
+
+  async onSubmit(e){
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const email = form.get("email");
-    login({ id: "1", name: email.split("@")[0] || "Usuario", role: null });
-    navigate("/choose-role");
+    await appState.login(this.state.email, this.state.pass);
   }
 
-  return (
-    <section className="grid md:grid-cols-2 gap-6 items-center">
-      <div className="card">
-        <h1 className="text-2xl font-semibold mb-2">Ingresar</h1>
-        <p className="text-sm text-slate-500 mb-6">Accede para continuar.</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Correo</label>
-            <input name="email" type="email" required className="input mt-1" placeholder="tucorreo@ejemplo.com"/>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Contraseña</label>
-            <input name="password" type="password" required className="input mt-1" placeholder="••••••••"/>
-          </div>
-          <button className="btn btn-primary w-full">Entrar</button>
-        </form>
-        <p className="text-sm text-slate-500 mt-4">
-          ¿No tienes cuenta? <Link className="text-indigo-600 hover:underline" to="/register">Regístrate</Link>
-        </p>
-      </div>
-      <div className="hidden md:block">
-        <div className="card h-full flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold">Bienvenido a UFOOD</h2>
-            <p className="text-slate-500 mt-2">Pide, sigue tu pedido y recibe en minutos.</p>
+  render(){
+    if (this.state.logged) return <Navigate to="/choose-role" replace />;
+
+    return (
+      <section className="grid md:grid-cols-2 gap-6 items-center">
+        <div className="card">
+          <h1 className="text-2xl font-semibold mb-2">Ingresar</h1>
+          <form onSubmit={(e)=>this.onSubmit(e)} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Correo</label>
+              <input className="input mt-1"
+                     value={this.state.email}
+                     onChange={(e)=>this.setState({ email: e.target.value })}
+                     type="email" required placeholder="tucorreo@ejemplo.com"/>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Contraseña</label>
+              <input className="input mt-1"
+                     value={this.state.pass}
+                     onChange={(e)=>this.setState({ pass: e.target.value })}
+                     type="password" required placeholder="••••••••"/>
+            </div>
+            <button className="btn btn-primary w-full">Entrar</button>
+          </form>
+          <p className="text-sm text-slate-500 mt-4">
+            ¿No tienes cuenta? <Link className="text-indigo-600 hover:underline" to="/register">Regístrate</Link>
+          </p>
+        </div>
+        <div className="hidden md:block">
+          <div className="card h-full flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold">Bienvenido a UFOOD</h2>
+              <p className="text-slate-500 mt-2">Pide, sigue tu pedido y recibe en minutos.</p>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  }
 }

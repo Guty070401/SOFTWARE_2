@@ -1,49 +1,62 @@
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/useAuthStore";
+import React from "react";
+import appState from "../oop/state/AppState";
+import { EVENTS } from "../oop/state/events";
+import withNavigate from "../oop/router/withNavigate";
 
-export default function Register(){
-  const navigate = useNavigate();
-  const login = useAuthStore(s => s.login);
+class Register extends React.Component {
+  state = { name: "", email: "", done: false, loading: false };
 
-  function onSubmit(e){
+  componentDidMount(){
+    this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u)=> { if (u) this.setState({ done: true }); });
+  }
+  componentWillUnmount(){ this.unsub && this.unsub(); }
+
+  async onSubmit(e){
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    login({ id: "2", name: form.get("name"), role: null });
-    navigate("/choose-role");
+    this.setState({ loading: true });
+    await appState.register({ name: this.state.name, email: this.state.email });
+    this.setState({ loading: false });
+    this.props.navigate("/choose-role", { replace: true });
   }
 
-  return (
-    <section className="max-w-xl mx-auto">
-      <div className="card">
-        <h1 className="text-2xl font-semibold mb-2">Crear cuenta</h1>
-        <form onSubmit={onSubmit} className="grid gap-4">
-          <div>
-            <label className="text-sm font-medium">Nombre</label>
-            <input name="name" className="input mt-1" required/>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
+  render(){
+    return (
+      <section className="max-w-xl mx-auto">
+        <div className="card">
+          <h1 className="text-2xl font-semibold mb-2">Crear cuenta</h1>
+          <form onSubmit={(e)=>this.onSubmit(e)} className="grid gap-4">
             <div>
-              <label className="text-sm font-medium">Correo</label>
-              <input name="email" type="email" className="input mt-1" required/>
+              <label className="text-sm font-medium">Nombre</label>
+              <input className="input mt-1" value={this.state.name} onChange={(e)=>this.setState({ name: e.target.value })} required/>
             </div>
-            <div>
-              <label className="text-sm font-medium">Teléfono</label>
-              <input name="phone" className="input mt-1" />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Correo</label>
+                <input className="input mt-1" type="email" value={this.state.email} onChange={(e)=>this.setState({ email: e.target.value })} required/>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Teléfono</label>
+                <input className="input mt-1" />
+              </div>
             </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Contraseña</label>
-              <input name="pass" type="password" className="input mt-1" required/>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Contraseña</label>
+              <input className="input mt-1" type="password" required/>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Confirmación</label>
+                <input className="input mt-1" type="password" required/>
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Confirmación</label>
-              <input name="pass2" type="password" className="input mt-1" required/>
-            </div>
-          </div>
-          <button className="btn btn-primary">Registrarme</button>
-        </form>
-      </div>
-    </section>
-  );
+            <button className="btn btn-primary" disabled={this.state.loading}>
+              {this.state.loading ? "Creando..." : "Registrarme"}
+            </button>
+          </form>
+        </div>
+      </section>
+    );
+  }
 }
+
+export default withNavigate(Register);

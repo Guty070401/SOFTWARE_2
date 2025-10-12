@@ -1,0 +1,5 @@
+export const EVENTS = Object.freeze({
+  AUTH_CHANGED: "AUTH_CHANGED",
+  CART_CHANGED: "CART_CHANGED",
+  ORDERS_CHANGED: "ORDERS_CHANGED",
+});
