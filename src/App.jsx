@@ -1,35 +1,28 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Link, Outlet } from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>GUTY</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
+          <span className="text-xl font-bold text-indigo-600">UFOOD</span>
+          <nav className="flex gap-2">
+            <Link className="pill" to="/">Login</Link>
+            <Link className="pill" to="/register">Registro</Link>
+            <Link className="pill" to="/choose-role">Elegir rol</Link>
+          </nav>
+          <div className="ml-auto flex gap-2">
+            <Link className="pill" to="/customer">Cliente</Link>
+            <Link className="pill" to="/courier">Repartidor</Link>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-6xl p-4">
+        <Outlet />
+      </main>
+      <footer className="mt-10 py-6 text-center text-sm text-slate-500">
+        © {new Date().getFullYear()} UFOOD
+      </footer>
+    </div>
+  );
 }
-
-export default App
