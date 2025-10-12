@@ -54,9 +54,17 @@ export default class CustomerHome extends React.Component {
   }
 
   addToCart = (item) => {
-    const itemForCart = new Item(item.id, item.name, item.price, item.desc, 1);
-    appState.addToCart(itemForCart);
-  }
+  const itemForCart = new Item(
+    item.id,
+    item.name,
+    item.price,
+    item.desc,
+    item.image, // ← pasar imagen
+    1           // qty
+  );
+  appState.addToCart(itemForCart);
+}
+
   
   handleToggleStore = (storeId) => {
     this.setState(prevState => ({
@@ -101,19 +109,24 @@ export default class CustomerHome extends React.Component {
                   <h4 className="font-semibold mb-2">Productos de {store.name}</h4>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {store.items.map(it => (
-                      <div key={it.id} className="card flex flex-col p-2 border border-slate-100">
-                  {/*   <img alt={store.name} className="h-24 w-24 object-cover rounded-xl flex-shrink-0"/>  */}
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{it.name}</h3>
-                          <p className="text-sm text-slate-500">{it.desc}</p>
-                        </div>
+                      <div key={it.id} className="card p-0 overflow-hidden flex flex-col">
+                      <img
+                        src={it.image}            // ← usa la imagen del item
+                        alt={it.name}
+                        className="w-full h-40 object-cover"
+                      />
+                      <div className="p-4 flex-1 flex flex-col">
+                        <h3 className="font-semibold">{it.name}</h3>
+                        <p className="text-sm text-slate-500">{it.desc}</p>
                         <div className="mt-4 flex items-center justify-between">
                           <span className="font-semibold">S/ {it.price}</span>
-                          <button className="btn btn-secondary" onClick={() => this.addToCart(it)}>
+                          <button className="btn btn-primary" onClick={() => this.addToCart(it)}>
                             Agregar
                           </button>
                         </div>
                       </div>
+                    </div>
+
                     ))}
                   </div>
                 </div>
