@@ -2,10 +2,10 @@
 const express = require('express');
 require('dotenv').config();
 const { sequelize } = require('./models');  // importa instancia de Sequelize
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
+const authRoutes = require('../routes/authRoutes.js');
+const userRoutes = require('../routes/userRoutes.js');
+const productRoutes = require('../routes/productRoutes.js');
+const orderRoutes = require('./routes/orderRoutes.js/index.js');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 
 const app = express();
