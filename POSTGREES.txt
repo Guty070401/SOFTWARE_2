@@ -1,0 +1,108 @@
+-- Limpieza segura (opcional en dev)
+DROP TABLE IF EXISTS historial_estados CASCADE;
+DROP TABLE IF EXISTS orden_producto     CASCADE;
+DROP TABLE IF EXISTS orden_usuario      CASCADE;
+DROP TABLE IF EXISTS orden              CASCADE;
+DROP TABLE IF EXISTS producto           CASCADE;
+DROP TABLE IF EXISTS tienda             CASCADE;
+DROP TABLE IF EXISTS tarjeta            CASCADE;
+DROP TABLE IF EXISTS usuario            CASCADE;
+
+-- =========================
+-- Tabla: usuario
+-- =========================
+CREATE TABLE usuario (
+  id      SERIAL PRIMARY KEY,
+  nombre  VARCHAR(100) NOT NULL,
+  email   VARCHAR(255) NOT NULL,
+  CONSTRAINT uq_usuario_email UNIQUE (email),
+  CONSTRAINT ck_usuario_email_domain CHECK (email LIKE '%@aloe.ulima.edu.pe')
+);
+
+-- =========================
+-- Tabla: tarjeta
+-- =========================
+CREATE TABLE tarjeta (
+  id         SERIAL PRIMARY KEY,
+  numero     VARCHAR(20) NOT NULL,
+  usuario_id INT NOT NULL,
+  CONSTRAINT uq_tarjeta_numero UNIQUE (numero),
+  CONSTRAINT fk_tarjeta_usuario FOREIGN KEY (usuario_id)
+    REFERENCES usuario(id) ON DELETE CASCADE
+);
+
+-- =========================
+-- Tabla: tienda
+-- =========================
+CREATE TABLE tienda (
+  id     SERIAL PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL
+);
+
+-- =========================
+-- Tabla: producto
+-- =========================
+CREATE TABLE producto (
+  id        SERIAL PRIMARY KEY,
+  nombre    VARCHAR(100) NOT NULL,
+  precio    NUMERIC(10,2) NOT NULL,
+  tienda_id INT NOT NULL,
+  CONSTRAINT fk_producto_tienda FOREIGN KEY (tienda_id)
+    REFERENCES tienda(id) ON DELETE CASCADE
+);
+
+-- =========================
+-- Tabla: orden
+-- =========================
+CREATE TABLE orden (
+  id     SERIAL PRIMARY KEY,
+  fecha  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  total  NUMERIC(10,2) NOT NULL CHECK (total >= 0)
+);
+
+-- =========================
+-- Tabla: orden_usuario  (N↔N)
+-- =========================
+CREATE TABLE orden_usuario (
+  id         SERIAL PRIMARY KEY,
+  orden_id   INT NOT NULL,
+  usuario_id INT NOT NULL,
+  CONSTRAINT fk_ou_orden   FOREIGN KEY (orden_id)   REFERENCES orden(id)   ON DELETE CASCADE,
+  CONSTRAINT fk_ou_usuario FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE CASCADE,
+  CONSTRAINT uq_ou_pair UNIQUE (orden_id, usuario_id)
+);
+
+-- =========================
+-- Tabla: orden_producto
+-- =========================
+CREATE TABLE orden_producto (
+  id          SERIAL PRIMARY KEY,
+  orden_id    INT NOT NULL,
+  producto_id INT NOT NULL,
+  cantidad    INT NOT NULL,
+  CONSTRAINT ck_orden_producto_cantidad CHECK (cantidad > 0),
+  CONSTRAINT fk_op_orden   FOREIGN KEY (orden_id)    REFERENCES orden(id)    ON DELETE CASCADE,
+  CONSTRAINT fk_op_producto FOREIGN KEY (producto_id) REFERENCES producto(id),
+  CONSTRAINT uq_op_pair UNIQUE (orden_id, producto_id)
+);
+
+-- =========================
+-- Tabla: historial_estados
+-- =========================
+CREATE TABLE historial_estados (
+  id           SERIAL PRIMARY KEY,
+  orden_id     INT NOT NULL,
+  estado       VARCHAR(50) NOT NULL,
+  fecha_cambio TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_historial_orden FOREIGN KEY (orden_id)
+    REFERENCES orden(id) ON DELETE CASCADE
+);
+
+-- Índices útiles (performance)
+CREATE INDEX idx_tarjeta_usuario      ON tarjeta(usuario_id);
+CREATE INDEX idx_producto_tienda      ON producto(tienda_id);
+CREATE INDEX idx_orden_usuario_o      ON orden_usuario(orden_id);
+CREATE INDEX idx_orden_usuario_u      ON orden_usuario(usuario_id);
+CREATE INDEX idx_orden_producto_o     ON orden_producto(orden_id);
+CREATE INDEX idx_orden_producto_p     ON orden_producto(producto_id);
+CREATE INDEX idx_historial_estados_o  ON historial_estados(orden_id);
