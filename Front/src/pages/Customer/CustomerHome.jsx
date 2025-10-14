@@ -41,7 +41,8 @@ const STORES = [storeBembos, storeLaNevera, storeMrSushi];
 export default class CustomerHome extends React.Component {
   state = {
     cartCount: 0,
-    selectedStoreId: null
+    selectedStoreId: null,   // controla abrir/cerrar productos
+    filterStoreId: "all"     // NUEVO: controla el filtro de establecimiento
   };
 
   componentDidMount() {
@@ -54,25 +55,22 @@ export default class CustomerHome extends React.Component {
   }
 
   addToCart = (item) => {
-  const itemForCart = new Item(
-    item.id,
-    item.name,
-    item.price,
-    item.desc,
-    item.image, // ← pasar imagen
-    1           // qty
-  );
-  appState.addToCart(itemForCart);
-}
+    const itemForCart = new Item(item.id, item.name, item.price, item.desc, item.image, 1);
+    appState.addToCart(itemForCart);
+  }
 
-  
   handleToggleStore = (storeId) => {
-    this.setState(prevState => ({
-      selectedStoreId: prevState.selectedStoreId === storeId ? null : storeId
+    this.setState(prev => ({
+      selectedStoreId: prev.selectedStoreId === storeId ? null : storeId
     }));
   }
 
   render() {
+    // Aplica el filtro por establecimiento
+    const storesToRender = this.state.filterStoreId === "all"
+      ? STORES
+      : STORES.filter(s => s.id === this.state.filterStoreId);
+
     return (
       <section>
         <div className="flex items-end justify-between mb-4">
@@ -83,20 +81,43 @@ export default class CustomerHome extends React.Component {
           <Link to="/customer/cart" className="pill">Carrito ({this.state.cartCount})</Link>
         </div>
 
+        {/* Filtro por establecimiento */}
+        <div className="mb-4 flex items-center gap-3">
+          <label className="text-sm font-medium">Establecimiento:</label>
+          <select
+            className="border rounded px-2 py-1"
+            value={this.state.filterStoreId}
+            onChange={(e) => this.setState({ filterStoreId: e.target.value })}
+          >
+            <option value="all">Todos</option>
+            {STORES.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+          {this.state.filterStoreId !== "all" && (
+            <button
+              className="btn"
+              onClick={() => this.setState({ filterStoreId: "all", selectedStoreId: null })}
+            >
+              Ver todos
+            </button>
+          )}
+        </div>
+
         <div className="flex flex-col gap-6">
-          {STORES.map(store => (
+          {storesToRender.map(store => (
             <div key={store.id} className="card">
               <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <img 
-                  src={store.image} 
-                  alt={store.name} 
+                <img
+                  src={store.image}
+                  alt={store.name}
                   className="h-24 w-24 object-cover rounded-xl flex-shrink-0"
                 />
                 <div className="flex-1 text-center sm:text-left">
                   <h3 className="text-xl font-semibold">{store.name}</h3>
                   <p className="text-slate-500">{store.desc}</p>
                 </div>
-                <button 
+                <button
                   className="btn btn-primary self-center flex-shrink-0"
                   onClick={() => this.handleToggleStore(store.id)}
                 >
@@ -110,23 +131,22 @@ export default class CustomerHome extends React.Component {
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {store.items.map(it => (
                       <div key={it.id} className="card p-0 overflow-hidden flex flex-col">
-                      <img
-                        src={it.image}            // ← usa la imagen del item
-                        alt={it.name}
-                        className="w-full h-40 object-cover"
-                      />
-                      <div className="p-4 flex-1 flex flex-col">
-                        <h3 className="font-semibold">{it.name}</h3>
-                        <p className="text-sm text-slate-500">{it.desc}</p>
-                        <div className="mt-4 flex items-center justify-between">
-                          <span className="font-semibold">S/ {it.price}</span>
-                          <button className="btn btn-primary" onClick={() => this.addToCart(it)}>
-                            Agregar
-                          </button>
+                        <img
+                          src={it.image}
+                          alt={it.name}
+                          className="w-full h-40 object-cover"
+                        />
+                        <div className="p-4 flex-1 flex flex-col">
+                          <h3 className="font-semibold">{it.name}</h3>
+                          <p className="text-sm text-slate-500">{it.desc}</p>
+                          <div className="mt-4 flex items-center justify-between">
+                            <span className="font-semibold">S/ {it.price}</span>
+                            <button className="btn btn-primary" onClick={() => this.addToCart(it)}>
+                              Agregar
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
                     ))}
                   </div>
                 </div>
