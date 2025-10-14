@@ -18,7 +18,7 @@ import imgSushiAcevichado from '../../assets/images/makis-acevichado.jpg';
 import imgSushiPoke from '../../assets/images/poke-atun.jpg';
 
 // -------------------------
-// Modelito simple de tienda
+// Modelo simple de tienda
 // -------------------------
 class Store {
   constructor(id, name, desc, image) {
@@ -86,7 +86,7 @@ export default class CustomerHome extends React.Component {
     this.setState({ stores });
   };
 
-  // Añadir al carrito (queda igual que tenías)
+  // Añadir al carrito
   addToCart = (item) => {
     const itemForCart = new Item(
       item.id,
@@ -109,7 +109,6 @@ export default class CustomerHome extends React.Component {
   // -------------------------
   // CRUD de productos (Front)
   // -------------------------
-
   addProductToStore = (storeId) => {
     const name = prompt("Nombre del producto:");
     if (!name) return;
@@ -139,7 +138,6 @@ export default class CustomerHome extends React.Component {
     });
 
     this.saveStores(next);
-    // Si la tienda estaba cerrada, la abrimos para ver el añadido
     if (this.state.selectedStoreId !== storeId) {
       this.setState({ selectedStoreId: storeId });
     }
@@ -159,7 +157,40 @@ export default class CustomerHome extends React.Component {
     this.saveStores(next);
   };
 
-  // Restablecer catálogo de fábrica (opcional)
+  // -------------------------
+  // CRUD de tiendas (Front)
+  // -------------------------
+  addStore = () => {
+    const name = prompt("Nombre de la tienda:");
+    if (!name) return;
+
+    const desc = prompt("Descripción corta:", "") || "";
+    const image =
+      prompt("URL de logo/imagen (opcional):", "") ||
+      "https://via.placeholder.com/160x160?text=Tienda";
+
+    const id = `s_${Date.now()}`;
+    const newStore = { id, name, desc, image, items: [] };
+
+    const next = [...this.state.stores, newStore];
+    this.saveStores(next);
+    // Abrimos la nueva tienda para que agregues productos
+    this.setState({ selectedStoreId: id, filterStoreId: "all" });
+  };
+
+  removeStore = (storeId) => {
+    if (!confirm("¿Eliminar esta tienda y todos sus productos?")) return;
+
+    const next = this.state.stores.filter((s) => s.id !== storeId);
+    this.saveStores(next);
+
+    const patch = {};
+    if (this.state.selectedStoreId === storeId) patch.selectedStoreId = null;
+    if (this.state.filterStoreId === storeId) patch.filterStoreId = "all";
+    if (Object.keys(patch).length) this.setState(patch);
+  };
+
+  // Restablecer catálogo de fábrica
   resetCatalog = () => {
     if (!confirm("¿Restablecer catálogo a los valores originales?")) return;
     localStorage.removeItem(LS_KEY);
@@ -183,6 +214,7 @@ export default class CustomerHome extends React.Component {
             <p className="text-slate-500">Elige tu tienda y platos favoritos</p>
           </div>
           <div className="flex items-center gap-2">
+            <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
             <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
               Reset catálogo
             </button>
@@ -237,6 +269,15 @@ export default class CustomerHome extends React.Component {
                   >
                     + Agregar producto
                   </button>
+
+                  <button
+                    className="btn btn-danger self-center"
+                    onClick={() => this.removeStore(store.id)}
+                    title="Eliminar tienda"
+                  >
+                    Eliminar tienda
+                  </button>
+
                   <button
                     className="btn btn-primary self-center flex-shrink-0"
                     onClick={() => this.handleToggleStore(store.id)}
@@ -293,3 +334,4 @@ export default class CustomerHome extends React.Component {
     );
   }
 }
+
