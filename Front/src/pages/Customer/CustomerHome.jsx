@@ -17,13 +17,21 @@ import imgSushiLogo from '../../assets/images/sushi-logo.jpg';
 import imgSushiAcevichado from '../../assets/images/makis-acevichado.jpg';
 import imgSushiPoke from '../../assets/images/poke-atun.jpg';
 
+// -------------------------
+// Modelito simple de tienda
+// -------------------------
 class Store {
   constructor(id, name, desc, image) {
-    this.id = id; this.name = name; this.desc = desc; this.image = image; this.items = [];
+    this.id = id;
+    this.name = name;
+    this.desc = desc;
+    this.image = image;
+    this.items = [];
   }
   addItem(item) { this.items.push(item); }
 }
 
+// Catálogo “de fábrica”
 const storeBembos = new Store("s1", "Bembos", "Las hamburguesas más bravas", imgBembosLogo);
 storeBembos.addItem(new Item("p1", "Nuggets", 18, "¡Prueba nuestros deliciosos Nuggets de pollo!", imgBembosNuggets));
 storeBembos.addItem(new Item("p2", "Hamburguesa Extrema", 20.90, "Doble carne, queso Edam, tocino, tomate, lechuga y mayonesa.", imgBembosExtrema));
@@ -36,49 +44,152 @@ const storeMrSushi = new Store("s3", "Mr. Sushi", "Cada maki es un bocado de pur
 storeMrSushi.addItem(new Item("p5", "Acevichado Maki", 28, "Roll de langostino empanizado y palta, cubierto con láminas de pescado blanco.", imgSushiAcevichado));
 storeMrSushi.addItem(new Item("p6", "Poke Atún Fresco", 29.90, "Base de arroz sushi, salsa de ostión, col morada, zanahoria y cubos de Atún.", imgSushiPoke));
 
-const STORES = [storeBembos, storeLaNevera, storeMrSushi];
+const DEFAULT_STORES = [storeBembos, storeLaNevera, storeMrSushi];
+const LS_KEY = "catalog_stores";
 
 export default class CustomerHome extends React.Component {
   state = {
     cartCount: 0,
-    selectedStoreId: null,   // controla abrir/cerrar productos
-    filterStoreId: "all"     // NUEVO: controla el filtro de establecimiento
+    selectedStoreId: null,   // abrir/cerrar productos de una tienda
+    filterStoreId: "all",    // filtro por establecimiento
+    stores: []               // catálogo editable (persistido en localStorage)
   };
 
   componentDidMount() {
-    this.unsub = appState.on(EVENTS.CART_CHANGED, (cartItems) => this.setState({ cartCount: cartItems.length }));
+    // Suscripción al carrito
+    this.unsub = appState.on(EVENTS.CART_CHANGED, (cartItems) => {
+      this.setState({ cartCount: cartItems.length });
+    });
     this.setState({ cartCount: appState.cart.length });
+
+    // Cargar catálogo: localStorage > default
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        this.setState({ stores: parsed });
+      } catch {
+        this.setState({ stores: DEFAULT_STORES });
+      }
+    } else {
+      this.setState({ stores: DEFAULT_STORES });
+    }
   }
 
   componentWillUnmount() {
     this.unsub && this.unsub();
   }
 
-  addToCart = (item) => {
-    const itemForCart = new Item(item.id, item.name, item.price, item.desc, item.image, 1);
-    appState.addToCart(itemForCart);
-  }
+  // Guardar catálogo y refrescar UI
+  saveStores = (stores) => {
+    localStorage.setItem(LS_KEY, JSON.stringify(stores));
+    this.setState({ stores });
+  };
 
+  // Añadir al carrito (queda igual que tenías)
+  addToCart = (item) => {
+    const itemForCart = new Item(
+      item.id,
+      item.name,
+      item.price,
+      item.desc,
+      item.image,
+      1
+    );
+    appState.addToCart(itemForCart);
+  };
+
+  // Abrir/cerrar productos de una tienda
   handleToggleStore = (storeId) => {
     this.setState(prev => ({
       selectedStoreId: prev.selectedStoreId === storeId ? null : storeId
     }));
-  }
+  };
+
+  // -------------------------
+  // CRUD de productos (Front)
+  // -------------------------
+
+  addProductToStore = (storeId) => {
+    const name = prompt("Nombre del producto:");
+    if (!name) return;
+
+    const priceStr = prompt("Precio (por ejemplo, 25.90):", "0");
+    const price = Number(priceStr);
+    if (Number.isNaN(price)) return alert("Precio inválido.");
+
+    const desc = prompt("Descripción corta:", "") || "";
+    const image = prompt("URL de imagen (opcional). Si está vacío, se usará un placeholder:", "") ||
+      "https://via.placeholder.com/640x400?text=Producto";
+
+    const newItem = {
+      id: `p_${Date.now()}`, // id local simple
+      name,
+      price,
+      desc,
+      image
+    };
+
+    const next = this.state.stores.map(s => {
+      if (s.id === storeId) {
+        const items = Array.isArray(s.items) ? [...s.items, newItem] : [newItem];
+        return { ...s, items };
+      }
+      return s;
+    });
+
+    this.saveStores(next);
+    // Si la tienda estaba cerrada, la abrimos para ver el añadido
+    if (this.state.selectedStoreId !== storeId) {
+      this.setState({ selectedStoreId: storeId });
+    }
+  };
+
+  removeProductFromStore = (storeId, itemId) => {
+    if (!confirm("¿Eliminar este producto del catálogo?")) return;
+
+    const next = this.state.stores.map(s => {
+      if (s.id === storeId) {
+        const items = (s.items || []).filter(it => it.id !== itemId);
+        return { ...s, items };
+      }
+      return s;
+    });
+
+    this.saveStores(next);
+  };
+
+  // Restablecer catálogo de fábrica (opcional)
+  resetCatalog = () => {
+    if (!confirm("¿Restablecer catálogo a los valores originales?")) return;
+    localStorage.removeItem(LS_KEY);
+    this.setState({ stores: DEFAULT_STORES, selectedStoreId: null, filterStoreId: "all" });
+  };
 
   render() {
-    // Aplica el filtro por establecimiento
+    const baseStores = this.state.stores.length ? this.state.stores : DEFAULT_STORES;
+
+    // Filtro por establecimiento
     const storesToRender = this.state.filterStoreId === "all"
-      ? STORES
-      : STORES.filter(s => s.id === this.state.filterStoreId);
+      ? baseStores
+      : baseStores.filter(s => s.id === this.state.filterStoreId);
 
     return (
       <section>
+        {/* Header */}
         <div className="flex items-end justify-between mb-4">
           <div>
             <h1 className="text-2xl font-semibold">Tiendas</h1>
             <p className="text-slate-500">Elige tu tienda y platos favoritos</p>
           </div>
-          <Link to="/customer/cart" className="pill">Carrito ({this.state.cartCount})</Link>
+          <div className="flex items-center gap-2">
+            <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
+              Reset catálogo
+            </button>
+            <Link to="/customer/cart" className="pill">
+              Carrito ({this.state.cartCount})
+            </Link>
+          </div>
         </div>
 
         {/* Filtro por establecimiento */}
@@ -87,10 +198,10 @@ export default class CustomerHome extends React.Component {
           <select
             className="border rounded px-2 py-1"
             value={this.state.filterStoreId}
-            onChange={(e) => this.setState({ filterStoreId: e.target.value })}
+            onChange={(e) => this.setState({ filterStoreId: e.target.value, selectedStoreId: null })}
           >
             <option value="all">Todos</option>
-            {STORES.map(s => (
+            {baseStores.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
@@ -104,6 +215,7 @@ export default class CustomerHome extends React.Component {
           )}
         </div>
 
+        {/* Listado de tiendas */}
         <div className="flex flex-col gap-6">
           {storesToRender.map(store => (
             <div key={store.id} className="card">
@@ -117,19 +229,29 @@ export default class CustomerHome extends React.Component {
                   <h3 className="text-xl font-semibold">{store.name}</h3>
                   <p className="text-slate-500">{store.desc}</p>
                 </div>
-                <button
-                  className="btn btn-primary self-center flex-shrink-0"
-                  onClick={() => this.handleToggleStore(store.id)}
-                >
-                  {this.state.selectedStoreId === store.id ? "Cerrar" : "Ver Productos"}
-                </button>
+
+                <div className="flex gap-2">
+                  <button
+                    className="btn btn-outline self-center"
+                    onClick={() => this.addProductToStore(store.id)}
+                  >
+                    + Agregar producto
+                  </button>
+                  <button
+                    className="btn btn-primary self-center flex-shrink-0"
+                    onClick={() => this.handleToggleStore(store.id)}
+                  >
+                    {this.state.selectedStoreId === store.id ? "Cerrar" : "Ver Productos"}
+                  </button>
+                </div>
               </div>
 
+              {/* Productos */}
               {this.state.selectedStoreId === store.id && (
                 <div className="mt-4 pt-4 border-t border-slate-200">
                   <h4 className="font-semibold mb-2">Productos de {store.name}</h4>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {store.items.map(it => (
+                    {(store.items || []).map(it => (
                       <div key={it.id} className="card p-0 overflow-hidden flex flex-col">
                         <img
                           src={it.image}
@@ -138,16 +260,29 @@ export default class CustomerHome extends React.Component {
                         />
                         <div className="p-4 flex-1 flex flex-col">
                           <h3 className="font-semibold">{it.name}</h3>
-                          <p className="text-sm text-slate-500">{it.desc}</p>
+                          <p className="text-sm text-slate-500 line-clamp-3">{it.desc}</p>
                           <div className="mt-4 flex items-center justify-between">
                             <span className="font-semibold">S/ {it.price}</span>
-                            <button className="btn btn-primary" onClick={() => this.addToCart(it)}>
-                              Agregar
-                            </button>
+                            <div className="flex gap-2">
+                              <button className="btn btn-secondary" onClick={() => this.addToCart(it)}>
+                                Agregar
+                              </button>
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => this.removeProductFromStore(store.id, it.id)}
+                                title="Eliminar del catálogo"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     ))}
+
+                    {(store.items || []).length === 0 && (
+                      <div className="text-slate-500 italic">No hay productos en esta tienda.</div>
+                    )}
                   </div>
                 </div>
               )}
