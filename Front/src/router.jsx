@@ -13,7 +13,7 @@ import OrderDetail from "./pages/courier/OrderDetail.jsx";
 import Register from "./pages/Register.jsx";
 import CustomerOrders from "./pages/Customer/CustomerOrders";
 
-
+// Rutas de la aplicación
 const router = createBrowserRouter([
   { path: "/", element: <App />,
     children: [

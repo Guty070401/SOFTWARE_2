@@ -1,4 +1,4 @@
-// ✅ useOrderStore.js — versión corregida
+// useOrderStore.js — versión corregida
 import { create } from "zustand";
 
 export const useOrderStore = create((set) => ({
@@ -19,7 +19,7 @@ export const useOrderStore = create((set) => ({
     return { cart: [...s.cart, { ...item, qty: 1 }] };
   }),
 
-  // ✅ Corrección: solo resta 1 cantidad, no elimina todo el producto
+  // Corrección: solo resta 1 cantidad, no elimina todo el producto
   removeFromCart: (id) => set((s) => ({
     cart: s.cart.flatMap(i => {
       if (i.id !== id) return [i];
