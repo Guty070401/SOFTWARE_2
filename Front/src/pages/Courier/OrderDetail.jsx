@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import appState from "../../oop/state/AppState";
 import { EVENTS } from "../../oop/state/events";
 import OrderStatus from "../../oop/models/OrderStatus";
@@ -18,11 +18,11 @@ class OrderDetail extends React.Component {
   }
   componentWillUnmount(){ this.unsub && this.unsub(); }
 
-  load(){
-    const { id } = this.props.params;
-    const o = appState.orders.find(x => x.id === id);
-    this.setState({ order: o || null, notFound: !o });
-  }
+  load() {
+  const { id } = this.props.params;
+  const o = appState.orders.find(x => String(x.id) === String(id));
+  this.setState({ order: o || null, notFound: !o });
+}
 
   async updateStatus(s){
     if (!this.state.order) return;
@@ -34,6 +34,9 @@ class OrderDetail extends React.Component {
     if (this.state.notFound) return <div className="card">Pedido no encontrado.</div>;
     const o = this.state.order;
     if (!o) return null;
+
+    // Obtenemos el rol actual del usuario
+    const userRole = appState.user?.role;
 
     return (
       <section className="grid lg:grid-cols-3 gap-6">
@@ -60,21 +63,32 @@ class OrderDetail extends React.Component {
               <span className="text-slate-500">Total</span>
               <span className="font-semibold">S/ {o.total}</span>
             </div>
-            <button onClick={()=>this.setState({ modal:true })} className="btn btn-primary w-full mt-4">
-              Actualizar estado
-            </button>
+
+            {/* Solo el repartidor puede actualizar estado */}
+            {userRole === "courier" && (
+              <button
+                onClick={()=>this.setState({ modal:true })}
+                className="btn btn-primary w-full mt-4"
+              >
+                Actualizar estado
+              </button>
+            )}
           </div>
         </aside>
 
-        {/* Modal simple */}
-        {this.state.modal && (
+        {/* Modal visible solo si es courier */}
+        {userRole === "courier" && this.state.modal && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
             <div className="card w-full max-w-sm">
               <h3 className="text-lg font-semibold mb-2">Actualizar estado</h3>
               <div className="grid gap-2">
                 {[OrderStatus.ACCEPTED, OrderStatus.PICKED, OrderStatus.ON_ROUTE, OrderStatus.DELIVERED, OrderStatus.CANCELED]
                   .map(s => (
-                    <button key={s} className={`btn w-full ${s===OrderStatus.DELIVERED ? "btn-primary":""}`} onClick={()=>this.updateStatus(s)}>
+                    <button
+                      key={s}
+                      className={`btn w-full ${s===OrderStatus.DELIVERED ? "btn-primary":""}`}
+                      onClick={()=>this.updateStatus(s)}
+                    >
                       {s}
                     </button>
                 ))}

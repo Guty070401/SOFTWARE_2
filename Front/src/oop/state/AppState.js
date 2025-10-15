@@ -46,9 +46,19 @@ class AppState {
   logout(){ this.user = null; this.emit(EVENTS.AUTH_CHANGED, null); }
 
   // --- Cart ---
-  addToCart(item){ this.cart = [...this.cart, item]; this.emit(EVENTS.CART_CHANGED, this.cart); }
-  removeFromCart(id){ this.cart = this.cart.filter(i => i.id !== id); this.emit(EVENTS.CART_CHANGED, this.cart); }
-  clearCart(){ this.cart = []; this.emit(EVENTS.CART_CHANGED, this.cart); }
+  addToCart(item) {
+    const cartItem = { ...item, cartId: Date.now() + Math.random() };
+    this.cart.push(cartItem);
+    this.emit(EVENTS.CART_CHANGED, this.cart);
+  }
+  removeFromCart(cartId) {
+    this.cart = this.cart.filter(i => i.cartId !== cartId);
+    this.emit(EVENTS.CART_CHANGED, this.cart);
+  }
+  clearCart(){ 
+    this.cart = []; 
+    this.emit(EVENTS.CART_CHANGED, this.cart); 
+  }
 
   // --- Orders ---
   async placeOrder(){
