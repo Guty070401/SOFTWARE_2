@@ -214,14 +214,17 @@ export default class CustomerHome extends React.Component {
             <p className="text-slate-500">Elige tu tienda y platos favoritos</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
-            <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
-              Reset catálogo
-            </button>
-            <Link to="/customer/cart" className="pill">
-              Carrito ({this.state.cartCount})
-            </Link>
-          </div>
+  <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
+  <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
+    Reset catálogo
+  </button>
+  <Link to="/customer/cart" className="pill">
+    Carrito ({this.state.cartCount})
+  </Link>
+  <Link to="/customer/orders" className="pill">
+    Ver pedidos
+  </Link>
+</div>
         </div>
 
         {/* Filtro por establecimiento */}

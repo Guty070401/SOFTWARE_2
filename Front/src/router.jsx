@@ -4,13 +4,15 @@ import App from "./App.jsx";
 
 import Login from "./pages/Login.jsx";
 import ChooseRole from "./pages/ChooseRole.jsx";
-import CustomerHome from "./pages/customer/CustomerHome.jsx";
+import CustomerHome from "./pages/Customer/CustomerHome.jsx";
 import Cart from "./pages/customer/Cart.jsx";
 import Checkout from "./pages/customer/Checkout.jsx";
 import TrackOrder from "./pages/customer/TrackOrder.jsx";
 import CourierHome from "./pages/courier/CourierHome.jsx";
 import OrderDetail from "./pages/courier/OrderDetail.jsx";
 import Register from "./pages/Register.jsx";
+import CustomerOrders from "./pages/Customer/CustomerOrders";
+
 
 const router = createBrowserRouter([
   { path: "/", element: <App />,
@@ -24,6 +26,8 @@ const router = createBrowserRouter([
       { path: "customer/track", element: <TrackOrder /> },
       { path: "courier", element: <CourierHome /> },
       { path: "courier/order/:id", element: <OrderDetail /> },
+      { path: "/customer/orders", element: <CustomerOrders /> },
+
     ]
   }
 ]);

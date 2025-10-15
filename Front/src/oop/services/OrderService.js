@@ -5,15 +5,17 @@ import OrderStatus from "../models/OrderStatus.js";
 export default class OrderService {
   constructor(){ this.api = new ApiClient(); }
 
-  async placeOrder(items){
-    const o = new Order(Date.now().toString(), items);
-    await this.api.post("/orders", o);
-    return o;
-  }
-  async updateStatus(order, status){
-    order.setStatus(status);
-    await this.api.post(`/orders/${order.id}/status`, { status });
-    return order;
-  }
+  async placeOrder(cart, totalOverride = null) {
+  const total = totalOverride ?? cart.reduce((a, i) => a + i.price * (i.qty ?? 1), 0);
+  const order = {
+    id: Date.now(),
+    items: [...cart],
+    total,
+    status: "pendiente",
+  };
+  // Aquí puedes simular guardarlo o retornarlo
+  return order;
+}
+
   steps(){ return [OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PICKED, OrderStatus.ON_ROUTE, OrderStatus.DELIVERED]; }
 }
