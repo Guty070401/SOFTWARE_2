@@ -1,5 +1,5 @@
 export default class Item {
-  //            ↓ añade image y deja qty al final (con default = 1)
+
   constructor(id, name, price, desc = "", image = null, qty = 1) {
     this.id = id;
     this.name = name;

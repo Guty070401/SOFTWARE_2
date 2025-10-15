@@ -1,3 +1,4 @@
+// Servicio del regisstro y logeo de usuarios
 import ApiClient from "./ApiClient.js";
 import User from "../models/User.js";
 
@@ -18,3 +19,4 @@ export default class AuthService {
     return user;
   }
 }
+

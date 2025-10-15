@@ -1,3 +1,4 @@
+// La orden del usuario
 import ApiClient from "./ApiClient.js";
 import Order from "../models/Order.js";
 import OrderStatus from "../models/OrderStatus.js";
@@ -19,3 +20,5 @@ export default class OrderService {
 
   steps(){ return [OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PICKED, OrderStatus.ON_ROUTE, OrderStatus.DELIVERED]; }
 }
+
+//Falta conexión del back
