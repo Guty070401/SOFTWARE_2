@@ -34,23 +34,24 @@ Puede configurar las variables de entorno en un archivo `.env`. Las más relevan
 ## Flujo típico de uso
 
 1. **Autenticación**
-   - `POST /api/auth/login` con `email` y `password`. Devuelve el token JWT.
    - `POST /api/auth/register` crea un nuevo usuario comprador.
+   - `POST /api/auth/login` con `email` y `password`. Devuelve el token JWT.
 
 2. **Usuarios**
    - `GET /api/users/me` devuelve el perfil autenticado.
-   - `PUT /api/users/me` actualiza datos del perfil.
-   - `GET /api/users` (solo admins) lista todos los usuarios.
+   - `PATCH /api/users/me` actualiza datos del perfil (nombre, celular, foto, rol).
+   - `GET /api/users/me/cards` lista las tarjetas del usuario.
+   - `POST /api/users/me/cards` agrega una tarjeta.
+   - `DELETE /api/users/me/cards/:cardId` elimina una tarjeta del usuario.
 
 3. **Tiendas y productos**
-   - `GET /api/stores` lista tiendas con sus productos.
-   - `POST /api/stores` (admins) crea tiendas nuevas.
-   - `POST /api/stores/:storeId/products` (dueño de tienda) agrega productos.
+   - `GET /api/stores` lista tiendas con sus productos disponibles, listos para poblar el menú del frontend.
 
 4. **Órdenes**
-   - `POST /api/orders` crea una orden para una tienda.
-   - `GET /api/orders` lista órdenes según el rol del usuario.
-   - `PATCH /api/orders/:orderId/status` actualiza el estado siguiendo la secuencia `pendiente → preparada → enviada → entregada`.
+   - `POST /api/orders` crea una orden para la tienda seleccionada.
+   - `GET /api/orders` lista órdenes según el rol del usuario (cliente, repartidor o administrador).
+   - `GET /api/orders/:orderId` devuelve el detalle completo de una orden.
+   - `PATCH /api/orders/:orderId/status` actualiza el estado siguiendo la secuencia `pending → accepted → picked → on_route → delivered` (o `canceled`).
 
 ## Estructura interna
 
@@ -65,9 +66,9 @@ Puede configurar las variables de entorno en un archivo `.env`. Las más relevan
 
 El servidor se inicializa con:
 
-- **Usuarios:** un administrador, un dueño de tienda y un comprador.
-- **Tiendas:** una tienda con dos productos.
-- **Órdenes:** ejemplos con historial de estados para probar el flujo completo.
+- **Usuarios:** un comprador de prueba y un repartidor.
+- **Tiendas:** tres restaurantes con sus productos destacados.
+- **Órdenes:** un pedido de ejemplo con historial de estados para probar el flujo de seguimiento.
 
 Puede modificar `src/seed/seedData.js` para adaptar los datos iniciales al frontend.
 
