@@ -1,19 +1,43 @@
 const { tiendas, productos } = require('../data/database');
 
-function listStores() {
-  return Array.from(tiendas.values()).map((store) => {
-    const storeProducts = Array.from(store.productos).map((productId) => {
-      const product = productos.get(productId);
-      return product ? product.toJSON() : null;
-    }).filter(Boolean);
+function mapProduct(product) {
+  if (!product) {
+    return null;
+  }
+  const { storeId, ...rest } = product.toJSON();
+  return rest;
+}
 
-    return {
-      id: store.id,
-      nombre: store.nombreOrigen,
-      logo: store.logo,
-      productos: storeProducts
-    };
-  });
+function mapStore(store, { includeItems = true } = {}) {
+  if (!store) {
+    return null;
+  }
+
+  const storeData = store.toJSON();
+  const items = includeItems
+    ? Array.from(store.productos)
+      .map((productId) => mapProduct(productos.get(productId)))
+      .filter(Boolean)
+    : null;
+
+  const dto = {
+    id: storeData.id,
+    name: storeData.name,
+    desc: storeData.desc,
+    image: storeData.logo,
+    logo: storeData.logo,
+    cantidad: storeData.cantidad
+  };
+
+  if (includeItems) {
+    dto.items = items;
+  }
+
+  return dto;
+}
+
+function listStores() {
+  return Array.from(tiendas.values()).map((store) => mapStore(store, { includeItems: true }));
 }
 
 function getStore(storeId) {
@@ -27,5 +51,7 @@ function getProduct(productId) {
 module.exports = {
   listStores,
   getStore,
-  getProduct
+  getProduct,
+  mapStore,
+  mapProduct
 };

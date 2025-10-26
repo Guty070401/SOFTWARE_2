@@ -35,33 +35,40 @@ function requireOrder(orderId) {
 }
 
 function orderToDTO(order) {
-  const store = storeService.getStore(order.tiendaId);
+  const store = storeService.mapStore(storeService.getStore(order.tiendaId), { includeItems: false });
   const items = order.items.map((orderProduct) => {
     const product = storeService.getProduct(orderProduct.productoId);
+    const productData = storeService.mapProduct(product);
     return {
-      id: product ? product.id : orderProduct.productoId,
-      name: product ? product.nombre : 'Producto',
+      id: productData ? productData.id : orderProduct.productoId,
+      name: productData ? productData.name : 'Producto',
+      desc: productData ? productData.desc : '',
+      image: productData ? productData.image : null,
       price: orderProduct.precioUnitario,
-      quantity: orderProduct.cantidad,
-      subtotal: orderProduct.subtotal(),
-      image: product ? product.foto : null
+      qty: orderProduct.cantidad,
+      subtotal: Number(orderProduct.subtotal().toFixed(2))
     };
   });
 
   const history = historialEstados
     .filter((hist) => hist.ordenId === order.id)
-    .map((hist) => hist.toJSON());
+    .map((hist) => ({
+      id: hist.id,
+      status: hist.estado,
+      notes: hist.comentarios,
+      timestamp: hist.hora.toISOString()
+    }));
 
   return {
     id: order.id,
     tracking: order.tracking,
     status: order.estado,
-    total: order.total,
-    store: store ? store.toJSON() : null,
+    total: Number(order.total.toFixed(2)),
+    store,
     items,
     history,
-    direccionEntrega: order.direccionEntrega,
-    comentarios: order.comentarios,
+    address: order.direccionEntrega,
+    notes: order.comentarios,
     createdAt: order.createdAt.toISOString()
   };
 }
