@@ -19,6 +19,8 @@ import imgSushiAcevichado from "../../assets/images/makis-acevichado.jpg";
 import imgSushiPoke from "../../assets/images/poke-atun.jpg";
 
 const LS_KEY = "catalog_stores";
+const PLACEHOLDER_STORE_IMAGE = "https://via.placeholder.com/160x160?text=Tienda";
+const PLACEHOLDER_PRODUCT_IMAGE = "https://via.placeholder.com/640x400?text=Producto";
 
 function cloneStores(stores){
   return stores.map((store) => ({
@@ -60,6 +62,49 @@ const DEFAULT_STORES = cloneStores([
   }
 ]);
 
+function normalise(text) {
+  return (text || "").toString().trim().toLowerCase();
+}
+
+function findFallbackStore(store, candidates) {
+  const targetId = store?.id;
+  const targetName = normalise(store?.nombre || store?.name);
+  return candidates.find((candidate) => {
+    if (!candidate) return false;
+    if (candidate.id && targetId && candidate.id === targetId) return true;
+    return normalise(candidate.name) === targetName && targetName.length > 0;
+  });
+}
+
+function mergeStoreAssets(store, fallbackStore) {
+  if (!fallbackStore) return store;
+
+  const mergedItems = Array.isArray(store.items)
+    ? store.items.map((item) => {
+        const fallbackItem = (fallbackStore.items || []).find(
+          (fallback) =>
+            fallback.id === item.id || normalise(fallback.name) === normalise(item.name)
+        );
+        const image =
+          item.image && item.image !== PLACEHOLDER_PRODUCT_IMAGE
+            ? item.image
+            : fallbackItem?.image || item.image;
+        return { ...item, image };
+      })
+    : [];
+
+  const image =
+    store.image && store.image !== PLACEHOLDER_STORE_IMAGE
+      ? store.image
+      : fallbackStore.image || store.image;
+
+  return {
+    ...store,
+    image,
+    items: mergedItems
+  };
+}
+
 function attachStoreMetadata(store){
   return {
     ...store,
@@ -71,24 +116,25 @@ function attachStoreMetadata(store){
   };
 }
 
-function mapApiStore(store){
+function mapApiStore(store, candidates){
   if (!store) return null;
   const normalised = {
     id: store.id,
     name: store.nombre || store.name || "Tienda",
     desc: store.descripcion || store.description || "",
-    image: store.logo || store.image || "https://via.placeholder.com/160x160?text=Tienda",
+    image: store.logo || store.image || PLACEHOLDER_STORE_IMAGE,
     items: Array.isArray(store.productos)
       ? store.productos.map((product) => ({
           id: product.id,
           name: product.nombre || product.name,
           price: Number(product.precio ?? product.price ?? 0),
           desc: product.descripcion || product.description || "",
-          image: product.foto || product.image || "https://via.placeholder.com/640x400?text=Producto"
+          image: product.foto || product.image || PLACEHOLDER_PRODUCT_IMAGE
         }))
       : []
   };
-  return attachStoreMetadata(normalised);
+  const fallbackStore = findFallbackStore(normalised, candidates);
+  return attachStoreMetadata(mergeStoreAssets(normalised, fallbackStore));
 }
 
 class CustomerHome extends React.Component {
@@ -146,8 +192,11 @@ class CustomerHome extends React.Component {
     try {
       const client = new ApiClient();
       const result = await client.get("/stores", { auth: false });
+      const fallbackCandidates = [...this.state.stores, ...DEFAULT_STORES];
       const stores = Array.isArray(result.stores)
-        ? result.stores.map(mapApiStore).filter(Boolean)
+        ? result.stores
+            .map((store) => mapApiStore(store, fallbackCandidates))
+            .filter(Boolean)
         : [];
       if (stores.length) {
         this.saveStores(stores);
@@ -195,7 +244,7 @@ class CustomerHome extends React.Component {
     const desc = prompt("Descripción corta:", "") || "";
     const image =
       prompt("URL de imagen (opcional). Si está vacío, se usará un placeholder:", "") ||
-      "https://via.placeholder.com/640x400?text=Producto";
+      PLACEHOLDER_PRODUCT_IMAGE;
 
     const newItem = {
       id: `p_${Date.now()}`,
@@ -242,7 +291,7 @@ class CustomerHome extends React.Component {
     const desc = prompt("Descripción corta:", "") || "";
     const image =
       prompt("URL de logo/imagen (opcional):", "") ||
-      "https://via.placeholder.com/160x160?text=Tienda";
+      PLACEHOLDER_STORE_IMAGE;
 
     const id = `s_${Date.now()}`;
     const newStore = attachStoreMetadata({ id, name, desc, image, items: [] });
