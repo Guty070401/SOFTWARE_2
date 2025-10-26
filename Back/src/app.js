@@ -1,48 +1,43 @@
-// Servidor
-// src/app.js
-const express = require('express');
 require('dotenv').config();
-const { sequelize } = require('./models');  // importa instancia de Sequelize
-const authRoutes = require('../routes/authRoutes.js');
-const userRoutes = require('../routes/userRoutes.js');
-const productRoutes = require('../routes/productRoutes.js');
-const orderRoutes = require('./routes/orderRoutes.js/index.js');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const storeRoutes = require('./routes/storeRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 const errorMiddleware = require('./middlewares/errorMiddleware');
+const seedData = require('./seed/seedData');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Middlewares globales
-app.use(express.json());  // parsear JSON
-const cors = require('cors');
-app.use(cors());  // habilitar CORS según se requiera (configurable)
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-// Registrar rutas
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
+app.use(helmet());
+app.use(cors({
+  origin: allowedOrigins.length ? allowedOrigins : undefined,
+  credentials: true
+}));
+app.use(express.json());
 
-// Ruta de prueba o salud
-app.get('/api/health', (req, res) => {
-  res.send('API funcionando');
+seedData().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('Error al inicializar datos de ejemplo', error);
 });
 
-// Middleware de manejo de errores (al final de las rutas)
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/stores', storeRoutes);
+app.use('/api/orders', orderRoutes);
+
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.use(errorMiddleware);
 
-// Conectar a la base de datos y luego iniciar el servidor
-(async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Conexión a DB exitosa');
-    // Sincronizar modelos con la base de datos en desarrollo (opcional)
-    // await sequelize.sync({ alter: true });
-    app.listen(PORT, () => {
-      console.log(`Servidor escuchando en http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('No se pudo conectar a la base de datos:', error);
-    process.exit(1);
-  }
-})();
+module.exports = app;

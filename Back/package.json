@@ -2,11 +2,11 @@
   "name": "ecommerce-backend",
   "version": "1.0.0",
   "description": "API RESTful Node.js + PostgreSQL + JWT (arquitectura por capas)",
-  "main": "src/app.js",
+  "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
-    "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "lint": "eslint .",
     "prepare": "husky install"
   },
