@@ -12,8 +12,14 @@ class ChooseRole extends React.Component {
   }
   componentWillUnmount(){ this.unsub && this.unsub(); }
 
-  choose(role){
-    appState.setRole(role);
+  async choose(role){
+    try {
+      await appState.setRole(role);
+    } catch (error) {
+      // eslint-disable-next-line no-alert
+      alert(error?.message || "No se pudo actualizar el rol");
+      return;
+    }
     this.props.navigate(role === "customer" ? "/customer" : "/courier", { replace: true });
   }
 

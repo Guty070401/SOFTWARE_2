@@ -10,6 +10,7 @@ export default class App extends React.Component {
     // Escuchar cambios de sesión (login / logout)
     this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => this.setState({ user: u }));
     this.setState({ user: appState.user });
+    appState.restoreSession()?.catch?.(() => {});
   }
 
   componentWillUnmount() {
