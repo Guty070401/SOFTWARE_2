@@ -1,42 +1,22 @@
+// Servicio del regisstro y logeo de usuarios
 import ApiClient from "./ApiClient.js";
 import User from "../models/User.js";
 
-function mapToUser(payload){
-  if (!payload) return null;
-  return new User(
-    payload.id,
-    payload.nombre || payload.name || payload.nombreUsuario || "",
-    payload.rol || payload.role || null,
-    payload.correo || payload.email || "",
-    payload.celular || payload.phone || "",
-    payload.foto || payload.photo || null
-  );
-}
-
 export default class AuthService {
-  constructor(){
-    this.api = new ApiClient();
+  constructor(){ this.api = new ApiClient(); }
+
+  async login(email, _pass){
+    // Simula login
+    const name = email.split("@")[0] || "Usuario";
+    const user = new User(crypto.randomUUID?.() || Date.now().toString(), name, null, email);
+    await this.api.post("/login", { email });
+    return user;
   }
 
-  async login(email, password){
-    const result = await this.api.post("/auth/login", { email, password }, { auth: false });
-    ApiClient.setAuthToken(result.token);
-    return { user: mapToUser(result.user), token: result.token };
-  }
-
-  async register({ name, email, password, phone }){
-    const payload = {
-      nombre: name,
-      correo: email,
-      password,
-      celular: phone
-    };
-    const result = await this.api.post("/auth/register", payload, { auth: false });
-    ApiClient.setAuthToken(result.token);
-    return { user: mapToUser(result.user), token: result.token };
-  }
-
-  logout(){
-    ApiClient.clearAuthToken();
+  async register({ name, email }){
+    const user = new User(crypto.randomUUID?.() || Date.now().toString(), name, null, email);
+    await this.api.post("/register", { name, email });
+    return user;
   }
 }
+

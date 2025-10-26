@@ -32,14 +32,17 @@ class Cart extends React.Component {
 
   // 🔹 Quita una unidad del producto
   removeOne(id) {
-    const match = appState.cart.find((item) => item.id === id);
-    if (!match) return;
-    appState.removeFromCart(match.cartId);
-    this.setState({ cart: appState.cart });
+    const index = this.state.cart.findIndex((i) => i.id === id);
+    if (index !== -1) {
+      const newCart = [...this.state.cart];
+      newCart.splice(index, 1); // elimina solo una unidad
+      appState.emit(EVENTS.CART_CHANGED, newCart);
+      this.setState({ cart: newCart });
+    }
   }
 
   total() {
-    return appState.cart.reduce((acc, i) => acc + i.price, 0);
+    return this.state.cart.reduce((acc, i) => acc + i.price, 0);
   }
 
   goCheckout() {

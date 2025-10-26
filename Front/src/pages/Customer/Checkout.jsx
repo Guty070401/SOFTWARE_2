@@ -8,7 +8,7 @@ function withLocation(Component){
 }
 
 class Checkout extends React.Component {
-  state = { total: 0, paying: false, error: null };
+  state = { total: 0, paying: false };
 
   componentDidMount(){
     const passed = this.props.location?.state?.total ?? 0;
@@ -18,22 +18,10 @@ class Checkout extends React.Component {
 
   async pay(e){
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const payload = {
-      name: formData.get("name")?.toString() ?? "",
-      phone: formData.get("phone")?.toString() ?? "",
-      address: formData.get("address")?.toString() ?? "",
-      notes: formData.get("notes")?.toString() ?? ""
-    };
-    this.setState({ paying: true, error: null });
-    try {
-      await appState.placeOrder(payload);
-      this.props.navigate("/customer/track", { replace: true });
-    } catch (error) {
-      this.setState({ error: error.message || "No se pudo crear el pedido" });
-    } finally {
-      this.setState({ paying: false });
-    }
+    this.setState({ paying: true });
+    await appState.placeOrder();
+    this.setState({ paying: false });
+    this.props.navigate("/customer/track", { replace: true });
   }
 
   render(){
@@ -44,24 +32,18 @@ class Checkout extends React.Component {
           <p className="text-slate-500 mb-4">Completa tus datos para confirmar.</p>
           <form onSubmit={(e)=>this.pay(e)} className="grid gap-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <input className="input" name="name" placeholder="Nombre y Apellidos" required/>
-              <input className="input" name="phone" placeholder="Teléfono" />
+              <input className="input" placeholder="Nombre y Apellidos" required/>
+              <input className="input" placeholder="Teléfono" />
             </div>
-            <input className="input" name="address" placeholder="Dirección exacta de entrega" required/>
+            <input className="input" placeholder="Dirección exacta de entrega" required/>
             <div className="grid md:grid-cols-2 gap-4">
-              <input className="input" placeholder="Nro. tarjeta" name="card" required/>
-              <input className="input" placeholder="MM/AA - CVV" name="card_exp" required/>
+              <input className="input" placeholder="Nro. tarjeta" required/>
+              <input className="input" placeholder="MM/AA - CVV" required/>
             </div>
-            <textarea className="input" name="notes" placeholder="Comentarios para la entrega" rows={3} />
             <div className="flex items-center justify-between">
               <span className="text-slate-600">Total a pagar</span>
               <span className="text-xl font-semibold">S/ {this.state.total}</span>
             </div>
-            {this.state.error && (
-              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded px-3 py-2">
-                {this.state.error}
-              </p>
-            )}
             <button className="btn btn-primary" disabled={this.state.paying}>
               {this.state.paying ? "Procesando..." : "Pagar y crear pedido"}
             </button>
