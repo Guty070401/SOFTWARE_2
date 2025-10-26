@@ -1,267 +1,140 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import ApiClient from "../../oop/services/ApiClient.js";
-import appState from "../../oop/state/AppState.js";
-import Item from "../../oop/models/Item.js";
-import { EVENTS } from "../../oop/state/events.js";
+import appState from "../../oop/state/AppState";
+import Item from "../../oop/models/Item";
+import { EVENTS } from "../../oop/state/events";
 
-import imgBembosLogo from "../../assets/images/bembos-logo.png";
-import imgBembosNuggets from "../../assets/images/nuggets.jpg";
-import imgBembosExtrema from "../../assets/images/hamburguesa-extrema.jpg";
+import imgBembosLogo from '../../assets/images/bembos-logo.png';
+import imgBembosNuggets from '../../assets/images/nuggets.jpg';
+import imgBembosExtrema from '../../assets/images/hamburguesa-extrema.jpg';
 
-import imgNeveraLogo from "../../assets/images/neverafit-logo.jpg";
-import imgNeveraAcai from "../../assets/images/bowl-acai.jpg";
-import imgNeveraTostadas from "../../assets/images/pan-palta.jpg";
+import imgNeveraLogo from '../../assets/images/neverafit-logo.jpg';
+import imgNeveraAcai from '../../assets/images/bowl-acai.jpg';
+import imgNeveraTostadas from '../../assets/images/pan-palta.jpg';
 
-import imgSushiLogo from "../../assets/images/sushi-logo.jpg";
-import imgSushiAcevichado from "../../assets/images/makis-acevichado.jpg";
-import imgSushiPoke from "../../assets/images/poke-atun.jpg";
+import imgSushiLogo from '../../assets/images/sushi-logo.jpg';
+import imgSushiAcevichado from '../../assets/images/makis-acevichado.jpg';
+import imgSushiPoke from '../../assets/images/poke-atun.jpg';
 
-const LS_KEY = "catalog_stores";
-const PLACEHOLDER_STORE_IMAGE = "https://via.placeholder.com/160x160?text=Tienda";
-const PLACEHOLDER_PRODUCT_IMAGE = "https://via.placeholder.com/640x400?text=Producto";
-
-function cloneStores(stores){
-  return stores.map((store) => ({
-    ...store,
-    items: (store.items || []).map((item) => ({ ...item }))
-  }));
-}
-
-const DEFAULT_STORES = cloneStores([
-  {
-    id: "s1",
-    name: "Bembos",
-    desc: "Las hamburguesas más bravas",
-    image: imgBembosLogo,
-    items: [
-      { id: "p1", name: "Nuggets", price: 18, desc: "¡Prueba nuestros deliciosos Nuggets de pollo!", image: imgBembosNuggets },
-      { id: "p2", name: "Hamburguesa Extrema", price: 20.9, desc: "Doble carne, queso Edam, tocino, tomate, lechuga y mayonesa.", image: imgBembosExtrema }
-    ]
-  },
-  {
-    id: "s2",
-    name: "La Nevera Fit",
-    desc: "Tus desayunos siempre ganan",
-    image: imgNeveraLogo,
-    items: [
-      { id: "p3", name: "Açai Bowl", price: 25, desc: "Con granola, plátano, fresas y arándanos.", image: imgNeveraAcai },
-      { id: "p4", name: "Tostadas con Palta", price: 15, desc: "Dos tostadas de pan integral con palta y semillas.", image: imgNeveraTostadas }
-    ]
-  },
-  {
-    id: "s3",
-    name: "Mr. Sushi",
-    desc: "Cada maki es un bocado de pura felicidad",
-    image: imgSushiLogo,
-    items: [
-      { id: "p5", name: "Acevichado Maki", price: 28, desc: "Roll de langostino empanizado y palta, cubierto con láminas de pescado blanco.", image: imgSushiAcevichado },
-      { id: "p6", name: "Poke Atún Fresco", price: 29.9, desc: "Base de arroz sushi, salsa de ostión, col morada, zanahoria y cubos de atún.", image: imgSushiPoke }
-    ]
+// -------------------------
+// Modelo simple de tienda
+// -------------------------
+class Store {
+  constructor(id, name, desc, image) {
+    this.id = id;
+    this.name = name;
+    this.desc = desc;
+    this.image = image;
+    this.items = [];
   }
-]);
-
-function normalise(text) {
-  return (text || "").toString().trim().toLowerCase();
+  addItem(item) { this.items.push(item); }
 }
 
-function findFallbackStore(store, candidates) {
-  const targetId = store?.id;
-  const targetName = normalise(store?.nombre || store?.name);
-  return candidates.find((candidate) => {
-    if (!candidate) return false;
-    if (candidate.id && targetId && candidate.id === targetId) return true;
-    return normalise(candidate.name) === targetName && targetName.length > 0;
-  });
-}
+// Catálogo “de fábrica”
+const storeBembos = new Store("s1", "Bembos", "Las hamburguesas más bravas", imgBembosLogo);
+storeBembos.addItem(new Item("p1", "Nuggets", 18, "¡Prueba nuestros deliciosos Nuggets de pollo!", imgBembosNuggets));
+storeBembos.addItem(new Item("p2", "Hamburguesa Extrema", 20.90, "Doble carne, queso Edam, tocino, tomate, lechuga y mayonesa.", imgBembosExtrema));
 
-function mergeStoreAssets(store, fallbackStore) {
-  if (!fallbackStore) return store;
+const storeLaNevera = new Store("s2", "La Nevera Fit", "Tus desayunos siempre ganan", imgNeveraLogo);
+storeLaNevera.addItem(new Item("p3", "Açai Bowl", 25, "Con granola, plátano, fresas y arándanos.", imgNeveraAcai));
+storeLaNevera.addItem(new Item("p4", "Tostadas con Palta", 15, "Dos tostadas de pan integral con palta y semillas.", imgNeveraTostadas));
 
-  const mergedItems = Array.isArray(store.items)
-    ? store.items.map((item) => {
-        const fallbackItem = (fallbackStore.items || []).find(
-          (fallback) =>
-            fallback.id === item.id || normalise(fallback.name) === normalise(item.name)
-        );
-        const image =
-          item.image && item.image !== PLACEHOLDER_PRODUCT_IMAGE
-            ? item.image
-            : fallbackItem?.image || item.image;
-        return { ...item, image };
-      })
-    : [];
+const storeMrSushi = new Store("s3", "Mr. Sushi", "Cada maki es un bocado de pura felicidad", imgSushiLogo);
+storeMrSushi.addItem(new Item("p5", "Acevichado Maki", 28, "Roll de langostino empanizado y palta, cubierto con láminas de pescado blanco.", imgSushiAcevichado));
+storeMrSushi.addItem(new Item("p6", "Poke Atún Fresco", 29.90, "Base de arroz sushi, salsa de ostión, col morada, zanahoria y cubos de Atún.", imgSushiPoke));
 
-  const image =
-    store.image && store.image !== PLACEHOLDER_STORE_IMAGE
-      ? store.image
-      : fallbackStore.image || store.image;
+const DEFAULT_STORES = [storeBembos, storeLaNevera, storeMrSushi];
+const LS_KEY = "catalog_stores";
 
-  return {
-    ...store,
-    image,
-    items: mergedItems
-  };
-}
-
-function attachStoreMetadata(store){
-  return {
-    ...store,
-    items: (store.items || []).map((item) => ({
-      ...item,
-      storeId: store.id,
-      storeName: store.name
-    }))
-  };
-}
-
-function mapApiStore(store, candidates){
-  if (!store) return null;
-  const normalised = {
-    id: store.id,
-    name: store.nombre || store.name || "Tienda",
-    desc: store.descripcion || store.description || "",
-    image: store.logo || store.image || PLACEHOLDER_STORE_IMAGE,
-    items: Array.isArray(store.productos)
-      ? store.productos.map((product) => ({
-          id: product.id,
-          name: product.nombre || product.name,
-          price: Number(product.precio ?? product.price ?? 0),
-          desc: product.descripcion || product.description || "",
-          image: product.foto || product.image || PLACEHOLDER_PRODUCT_IMAGE
-        }))
-      : []
-  };
-  const fallbackStore = findFallbackStore(normalised, candidates);
-  return attachStoreMetadata(mergeStoreAssets(normalised, fallbackStore));
-}
-
-class CustomerHome extends React.Component {
+export default class CustomerHome extends React.Component {
   state = {
     cartCount: 0,
-    selectedStoreId: null,
-    filterStoreId: "all",
-    stores: [],
-    loadingStores: false,
-    error: null
+    selectedStoreId: null,   // abrir/cerrar productos de una tienda
+    filterStoreId: "all",    // filtro por establecimiento
+    stores: []               // catálogo editable (persistido en localStorage)
   };
 
   componentDidMount() {
+    // Suscripción al carrito
     this.unsub = appState.on(EVENTS.CART_CHANGED, (cartItems) => {
       this.setState({ cartCount: cartItems.length });
     });
     this.setState({ cartCount: appState.cart.length });
 
-    const savedStores = this.loadStoredStores();
-    if (savedStores.length) {
-      this.setState({ stores: savedStores });
+    // Cargar catálogo: localStorage > default
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        this.setState({ stores: parsed });
+      } catch {
+        this.setState({ stores: DEFAULT_STORES });
+      }
     } else {
-      this.setState({ stores: DEFAULT_STORES.map(attachStoreMetadata) });
+      this.setState({ stores: DEFAULT_STORES });
     }
-
-    this.fetchStoresFromApi();
   }
 
   componentWillUnmount() {
     this.unsub && this.unsub();
   }
 
-  loadStoredStores() {
-    const saved = localStorage.getItem(LS_KEY);
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        return parsed.map(attachStoreMetadata);
-      }
-    } catch {
-      // ignore malformed data
-    }
-    return [];
-  }
-
+  // Guardar catálogo y refrescar UI
   saveStores = (stores) => {
-    const payload = cloneStores(stores);
-    localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    this.setState({ stores: payload.map(attachStoreMetadata) });
+    localStorage.setItem(LS_KEY, JSON.stringify(stores));
+    this.setState({ stores });
   };
 
-  fetchStoresFromApi = async () => {
-    this.setState({ loadingStores: true });
-    try {
-      const client = new ApiClient();
-      const result = await client.get("/stores", { auth: false });
-      const fallbackCandidates = [...this.state.stores, ...DEFAULT_STORES];
-      const stores = Array.isArray(result.stores)
-        ? result.stores
-            .map((store) => mapApiStore(store, fallbackCandidates))
-            .filter(Boolean)
-        : [];
-      if (stores.length) {
-        this.saveStores(stores);
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("No se pudieron cargar las tiendas", error);
-      this.setState({ error: "No se pudieron cargar las tiendas desde el servidor." });
-    } finally {
-      this.setState({ loadingStores: false });
-    }
-  };
-
-  addToCart = (store, item) => {
+  // Añadir al carrito
+  addToCart = (item) => {
     const itemForCart = new Item(
       item.id,
       item.name,
       item.price,
       item.desc,
       item.image,
-      1,
-      store.id,
-      store.name
+      1
     );
     appState.addToCart(itemForCart);
   };
 
+  // Abrir/cerrar productos de una tienda
   handleToggleStore = (storeId) => {
-    this.setState((prev) => ({
+    this.setState(prev => ({
       selectedStoreId: prev.selectedStoreId === storeId ? null : storeId
     }));
   };
 
+  // -------------------------
+  // CRUD de productos (Front)
+  // -------------------------
   addProductToStore = (storeId) => {
     const name = prompt("Nombre del producto:");
     if (!name) return;
 
     const priceStr = prompt("Precio (por ejemplo, 25.90):", "0");
     const price = Number(priceStr);
-    if (Number.isNaN(price)) {
-      alert("Precio inválido.");
-      return;
-    }
+    if (Number.isNaN(price)) return alert("Precio inválido.");
 
     const desc = prompt("Descripción corta:", "") || "";
-    const image =
-      prompt("URL de imagen (opcional). Si está vacío, se usará un placeholder:", "") ||
-      PLACEHOLDER_PRODUCT_IMAGE;
+    const image = prompt("URL de imagen (opcional). Si está vacío, se usará un placeholder:", "") ||
+      "https://via.placeholder.com/640x400?text=Producto";
 
     const newItem = {
-      id: `p_${Date.now()}`,
+      id: `p_${Date.now()}`, // id local simple
       name,
       price,
       desc,
       image
     };
 
-    const next = this.state.stores.map((store) => {
-      if (store.id === storeId) {
-        const items = Array.isArray(store.items) ? [...store.items, { ...newItem, storeId, storeName: store.name }] : [
-          { ...newItem, storeId, storeName: store.name }
-        ];
-        return { ...store, items };
+    const next = this.state.stores.map(s => {
+      if (s.id === storeId) {
+        const items = Array.isArray(s.items) ? [...s.items, newItem] : [newItem];
+        return { ...s, items };
       }
-      return store;
+      return s;
     });
 
     this.saveStores(next);
@@ -273,17 +146,20 @@ class CustomerHome extends React.Component {
   removeProductFromStore = (storeId, itemId) => {
     if (!confirm("¿Eliminar este producto del catálogo?")) return;
 
-    const next = this.state.stores.map((store) => {
-      if (store.id === storeId) {
-        const items = (store.items || []).filter((item) => item.id !== itemId);
-        return { ...store, items };
+    const next = this.state.stores.map(s => {
+      if (s.id === storeId) {
+        const items = (s.items || []).filter(it => it.id !== itemId);
+        return { ...s, items };
       }
-      return store;
+      return s;
     });
 
     this.saveStores(next);
   };
 
+  // -------------------------
+  // CRUD de tiendas (Front)
+  // -------------------------
   addStore = () => {
     const name = prompt("Nombre de la tienda:");
     if (!name) return;
@@ -291,20 +167,21 @@ class CustomerHome extends React.Component {
     const desc = prompt("Descripción corta:", "") || "";
     const image =
       prompt("URL de logo/imagen (opcional):", "") ||
-      PLACEHOLDER_STORE_IMAGE;
+      "https://via.placeholder.com/160x160?text=Tienda";
 
     const id = `s_${Date.now()}`;
-    const newStore = attachStoreMetadata({ id, name, desc, image, items: [] });
+    const newStore = { id, name, desc, image, items: [] };
 
     const next = [...this.state.stores, newStore];
     this.saveStores(next);
+    // Abrimos la nueva tienda para que agregues productos
     this.setState({ selectedStoreId: id, filterStoreId: "all" });
   };
 
   removeStore = (storeId) => {
     if (!confirm("¿Eliminar esta tienda y todos sus productos?")) return;
 
-    const next = this.state.stores.filter((store) => store.id !== storeId);
+    const next = this.state.stores.filter((s) => s.id !== storeId);
     this.saveStores(next);
 
     const patch = {};
@@ -313,40 +190,44 @@ class CustomerHome extends React.Component {
     if (Object.keys(patch).length) this.setState(patch);
   };
 
+  // Restablecer catálogo de fábrica
   resetCatalog = () => {
     if (!confirm("¿Restablecer catálogo a los valores originales?")) return;
     localStorage.removeItem(LS_KEY);
-    const stores = DEFAULT_STORES.map(attachStoreMetadata);
-    this.setState({ stores, selectedStoreId: null, filterStoreId: "all" });
+    this.setState({ stores: DEFAULT_STORES, selectedStoreId: null, filterStoreId: "all" });
   };
 
   render() {
-    const baseStores = this.state.stores.length ? this.state.stores : DEFAULT_STORES.map(attachStoreMetadata);
+    const baseStores = this.state.stores.length ? this.state.stores : DEFAULT_STORES;
+
+    // Filtro por establecimiento
     const storesToRender = this.state.filterStoreId === "all"
       ? baseStores
-      : baseStores.filter((store) => store.id === this.state.filterStoreId);
+      : baseStores.filter(s => s.id === this.state.filterStoreId);
 
     return (
       <section>
+        {/* Header */}
         <div className="flex items-end justify-between mb-4">
           <div>
             <h1 className="text-2xl font-semibold">Tiendas</h1>
             <p className="text-slate-500">Elige tu tienda y platos favoritos</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
-            <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
-              Reset catálogo
-            </button>
-            <Link to="/customer/cart" className="pill">
-              Carrito ({this.state.cartCount})
-            </Link>
-            <Link to="/customer/orders" className="pill">
-              Ver pedidos
-            </Link>
-          </div>
+  <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
+  <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
+    Reset catálogo
+  </button>
+  <Link to="/customer/cart" className="pill">
+    Carrito ({this.state.cartCount})
+  </Link>
+  <Link to="/customer/orders" className="pill">
+    Ver pedidos
+  </Link>
+</div>
         </div>
 
+        {/* Filtro por establecimiento */}
         <div className="mb-4 flex items-center gap-3">
           <label className="text-sm font-medium">Establecimiento:</label>
           <select
@@ -355,8 +236,8 @@ class CustomerHome extends React.Component {
             onChange={(e) => this.setState({ filterStoreId: e.target.value, selectedStoreId: null })}
           >
             <option value="all">Todos</option>
-            {baseStores.map((store) => (
-              <option key={store.id} value={store.id}>{store.name}</option>
+            {baseStores.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
           {this.state.filterStoreId !== "all" && (
@@ -369,19 +250,9 @@ class CustomerHome extends React.Component {
           )}
         </div>
 
-        {this.state.loadingStores && (
-          <div className="card border border-indigo-200 bg-indigo-50 text-sm text-indigo-700 mb-4">
-            Actualizando catálogo desde el servidor...
-          </div>
-        )}
-        {this.state.error && (
-          <div className="card border border-rose-200 bg-rose-50 text-sm text-rose-700 mb-4">
-            {this.state.error}
-          </div>
-        )}
-
+        {/* Listado de tiendas */}
         <div className="flex flex-col gap-6">
-          {storesToRender.map((store) => (
+          {storesToRender.map(store => (
             <div key={store.id} className="card">
               <div className="flex flex-col sm:flex-row gap-4 items-center">
                 <img
@@ -419,29 +290,30 @@ class CustomerHome extends React.Component {
                 </div>
               </div>
 
+              {/* Productos */}
               {this.state.selectedStoreId === store.id && (
                 <div className="mt-4 pt-4 border-t border-slate-200">
                   <h4 className="font-semibold mb-2">Productos de {store.name}</h4>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(store.items || []).map((item) => (
-                      <div key={item.id} className="card p-0 overflow-hidden flex flex-col">
+                    {(store.items || []).map(it => (
+                      <div key={it.id} className="card p-0 overflow-hidden flex flex-col">
                         <img
-                          src={item.image}
-                          alt={item.name}
+                          src={it.image}
+                          alt={it.name}
                           className="w-full h-40 object-cover"
                         />
                         <div className="p-4 flex-1 flex flex-col">
-                          <h3 className="font-semibold">{item.name}</h3>
-                          <p className="text-sm text-slate-500 line-clamp-3">{item.desc}</p>
+                          <h3 className="font-semibold">{it.name}</h3>
+                          <p className="text-sm text-slate-500 line-clamp-3">{it.desc}</p>
                           <div className="mt-4 flex items-center justify-between">
-                            <span className="font-semibold">S/ {item.price}</span>
+                            <span className="font-semibold">S/ {it.price}</span>
                             <div className="flex gap-2">
-                              <button className="btn btn-secondary" onClick={() => this.addToCart(store, item)}>
+                              <button className="btn btn-secondary" onClick={() => this.addToCart(it)}>
                                 Agregar
                               </button>
                               <button
                                 className="btn btn-danger"
-                                onClick={() => this.removeProductFromStore(store.id, item.id)}
+                                onClick={() => this.removeProductFromStore(store.id, it.id)}
                                 title="Eliminar del catálogo"
                               >
                                 Eliminar
@@ -466,4 +338,3 @@ class CustomerHome extends React.Component {
   }
 }
 
-export default CustomerHome;
