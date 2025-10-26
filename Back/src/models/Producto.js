@@ -20,11 +20,11 @@ class Producto {
   toJSON() {
     return {
       id: this.id,
-      nombre: this.nombre,
-      descripcion: this.descripcion,
-      foto: this.foto,
-      tiendaId: this.tiendaId,
-      precio: this.precio
+      name: this.nombre,
+      desc: this.descripcion,
+      image: this.foto,
+      storeId: this.tiendaId,
+      price: this.precio
     };
   }
 }
