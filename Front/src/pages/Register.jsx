@@ -4,49 +4,112 @@ import { EVENTS } from "../oop/state/events";
 import withNavigate from "../oop/router/withNavigate";
 
 class Register extends React.Component {
-  state = { name: "", email: "", done: false, loading: false };
+  state = {
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirm: "",
+    done: false,
+    loading: false,
+    error: null,
+  };
 
-  componentDidMount(){
-    this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u)=> { if (u) this.setState({ done: true }); });
+  componentDidMount() {
+    this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => {
+      if (u) this.setState({ done: true });
+    });
+    if (appState.user) {
+      this.setState({ done: true });
+    }
   }
-  componentWillUnmount(){ this.unsub && this.unsub(); }
 
-  async onSubmit(e){
+  componentWillUnmount() {
+    this.unsub && this.unsub();
+  }
+
+  async onSubmit(e) {
     e.preventDefault();
-    this.setState({ loading: true });
-    await appState.register({ name: this.state.name, email: this.state.email });
+    if (this.state.password !== this.state.confirm) {
+      this.setState({ error: "Las contraseñas no coinciden" });
+      return;
+    }
+    this.setState({ loading: true, error: null });
+    try {
+      await appState.register({
+        name: this.state.name,
+        email: this.state.email,
+        password: this.state.password,
+        phone: this.state.phone,
+      });
+    } catch (error) {
+      this.setState({ error: error.message || "No se pudo registrar", loading: false });
+      return;
+    }
     this.setState({ loading: false });
     this.props.navigate("/choose-role", { replace: true });
   }
 
-  render(){
+  render() {
     return (
       <section className="max-w-xl mx-auto">
         <div className="card">
           <h1 className="text-2xl font-semibold mb-2">Crear cuenta</h1>
-          <form onSubmit={(e)=>this.onSubmit(e)} className="grid gap-4">
+          <form onSubmit={(e) => this.onSubmit(e)} className="grid gap-4">
+            {this.state.error && (
+              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded px-3 py-2">
+                {this.state.error}
+              </p>
+            )}
             <div>
               <label className="text-sm font-medium">Nombre</label>
-              <input className="input mt-1" value={this.state.name} onChange={(e)=>this.setState({ name: e.target.value })} required/>
+              <input
+                className="input mt-1"
+                value={this.state.name}
+                onChange={(e) => this.setState({ name: e.target.value })}
+                required
+              />
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Correo</label>
-                <input className="input mt-1" type="email" value={this.state.email} onChange={(e)=>this.setState({ email: e.target.value })} required/>
+                <input
+                  className="input mt-1"
+                  type="email"
+                  value={this.state.email}
+                  onChange={(e) => this.setState({ email: e.target.value })}
+                  required
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">Teléfono</label>
-                <input className="input mt-1" />
+                <input
+                  className="input mt-1"
+                  value={this.state.phone}
+                  onChange={(e) => this.setState({ phone: e.target.value })}
+                />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Contraseña</label>
-              <input className="input mt-1" type="password" required/>
+                <input
+                  className="input mt-1"
+                  type="password"
+                  value={this.state.password}
+                  onChange={(e) => this.setState({ password: e.target.value })}
+                  required
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">Confirmación</label>
-                <input className="input mt-1" type="password" required/>
+                <input
+                  className="input mt-1"
+                  type="password"
+                  value={this.state.confirm}
+                  onChange={(e) => this.setState({ confirm: e.target.value })}
+                  required
+                />
               </div>
             </div>
             <button className="btn btn-primary" disabled={this.state.loading}>
