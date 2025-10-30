@@ -65,7 +65,7 @@ Puede configurar las variables de entorno en un archivo `.env`. Las más relevan
 
 El servidor se inicializa con:
 
-- **Usuarios:** un administrador, un dueño de tienda y un comprador.
+- **Usuarios:** un courier (`00000001@aloe.ulima.edu.pe`) y un comprador (`00000002@aloe.ulima.edu.pe`).
 - **Tiendas:** una tienda con dos productos.
 - **Órdenes:** ejemplos con historial de estados para probar el flujo completo.
 
