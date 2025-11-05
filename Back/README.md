@@ -43,7 +43,7 @@ npm install
 
    Ajuste el usuario, host o puerto según su entorno. El script crea usuarios, tiendas, productos y una orden de demostración lista para probar los endpoints.
 
-4. Configure las credenciales en un archivo `.env` dentro del directorio `Back/` (el repositorio incluye un ejemplo con la contraseña `Guty`):
+4. Configure las credenciales en un archivo `.env` dentro del directorio `Back/` (el repositorio incluye un ejemplo con la contraseña `Guty`). Si ya creaste la base desde herramientas como pgAdmin, solo debes asegurarte de que estos valores coincidan con lo que aparece en tu instancia (por ejemplo, el nombre `Software` que se observa en la captura adjunta):
 
    ```env
    DB_HOST=localhost
@@ -116,6 +116,8 @@ Adicionalmente, el servidor ejecuta `src/seed/seedData.js` al iniciar para compl
 ## Uso con el frontend
 
 Configure el frontend para apuntar a `http://localhost:3000/api`. Con el token JWT generado en `/api/auth/login`, envíe el header `Authorization: Bearer <token>` para acceder a los endpoints protegidos.
+
+> ¿Tienes dudas sobre cómo conectar exactamente la base `Software` que ya ves en pgAdmin? Consulta la guía paso a paso en [`docs/conectar-postgresql.md`](docs/conectar-postgresql.md).
 
 ## Colección de pruebas rápida
 

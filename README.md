@@ -33,6 +33,8 @@ Aplicación full-stack para la gestión de pedidos de comida, compuesta por un b
 
    Ajusta usuario, host o puerto según tu entorno.
 
+   > Si ya tienes la base creada (por ejemplo desde pgAdmin) y solo buscas conectar el backend, sigue la guía detallada en [`Back/docs/conectar-postgresql.md`](Back/docs/conectar-postgresql.md).
+
 ## 2. Configurar y arrancar el backend
 
 1. Sitúate en el directorio del backend y crea un archivo `.env` (el repositorio incluye un `.env` de referencia que puedes copiar o adaptar):
