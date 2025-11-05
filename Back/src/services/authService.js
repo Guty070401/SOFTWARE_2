@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
+const { ALOE_EMAIL_REGEX } = require('../constants/user');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '1h';
@@ -30,7 +31,14 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
     throw error;
   }
 
-  const existing = await findByEmail(correo);
+  const normalizedCorreo = String(correo).toLowerCase();
+  if (!ALOE_EMAIL_REGEX.test(normalizedCorreo)) {
+    const error = new Error('El correo debe seguir el formato 8 dígitos + @aloe.ulima.edu.pe');
+    error.status = 400;
+    throw error;
+  }
+
+  const existing = await findByEmail(normalizedCorreo);
   if (existing) {
     const error = new Error('El correo ya se encuentra registrado');
     error.status = 409;
@@ -39,7 +47,7 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
 
   const usuario = await Usuario.createWithPassword({
     nombreUsuario: nombre,
-    correo,
+    correo: normalizedCorreo,
     password,
     celular,
     rol

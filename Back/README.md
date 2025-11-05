@@ -2,6 +2,8 @@
 
 Este backend expone un conjunto de endpoints REST respaldados por PostgreSQL que siguen el diagrama de clases provisto.
 
+> **Importante:** Todos los usuarios utilizan correos institucionales en el formato `########@aloe.ulima.edu.pe` (ocho dígitos).
+
 ## Requisitos
 
 - Node.js 20+
@@ -33,13 +35,13 @@ npm install
    CREATE DATABASE "Software";
    ```
 
-3. Ejecute el script `database/schema.sql` para generar las tablas y tipos necesarios:
+3. Ejecute el script `database/schema.sql` para generar las tablas, tipos y datos de ejemplo necesarios:
 
    ```bash
    psql -U postgres -d "Software" -f database/schema.sql
    ```
 
-   Ajuste el usuario, host o puerto según su entorno.
+   Ajuste el usuario, host o puerto según su entorno. El script crea usuarios, tiendas, productos y una orden de demostración lista para probar los endpoints.
 
 4. Configure las credenciales en un archivo `.env` dentro del directorio `Back/` (el repositorio incluye un ejemplo con la contraseña `Guty`):
 
@@ -103,13 +105,13 @@ Variables de entorno disponibles:
 
 ## Datos de ejemplo
 
-El servidor se inicializa (tras sincronizar y aplicar la seed) con:
+Al ejecutar `database/schema.sql` tendrás inmediatamente:
 
-- **Usuarios:** un comprador de prueba y un repartidor.
-- **Tiendas:** tres restaurantes con sus productos destacados.
-- **Órdenes:** un pedido de ejemplo con historial de estados para probar el flujo de seguimiento.
+- **Usuarios:** un comprador (`20123456@aloe.ulima.edu.pe`) y un repartidor (`20023456@aloe.ulima.edu.pe`), ambos con contraseña `123456`.
+- **Tiendas y productos:** catálogos pre-cargados de Bembos y La Nevera Fit, listos para consultarse desde `/api/stores`.
+- **Órdenes:** un pedido con historial de estados y asignación de repartidor para probar `/api/orders`.
 
-Puede modificar `src/seed/seedData.js` para adaptar los datos iniciales o reemplazar `database/schema.sql` con su propia migración.
+Adicionalmente, el servidor ejecuta `src/seed/seedData.js` al iniciar para completar catálogos más extensos si detecta una base vacía. Puedes adaptar ese archivo o el propio `schema.sql` para personalizar los datos base.
 
 ## Uso con el frontend
 
@@ -135,7 +137,7 @@ Si quieres validar rápidamente que todo funciona sin abrir el frontend, puedes 
 # 1) Autentícate con el usuario demo
 curl -X POST http://localhost:3000/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email": "cliente@ufood.com", "password": "123456"}'
+  -d '{"email": "20123456@aloe.ulima.edu.pe", "password": "123456"}'
 
 # Guarda el token que devuelve la petición anterior en la variable TOKEN
 export TOKEN="<token_devuelto>"

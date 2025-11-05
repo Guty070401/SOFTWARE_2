@@ -1,6 +1,7 @@
 const { DataTypes, Model } = require('sequelize');
 const bcrypt = require('bcrypt');
 const sequelize = require('../database/connection');
+const { ALOE_EMAIL_REGEX } = require('../constants/user');
 
 class Usuario extends Model {
   async changePassword(oldPassword, newPassword) {
@@ -85,7 +86,11 @@ Usuario.init({
     allowNull: false,
     unique: true,
     validate: {
-      isEmail: true
+      isAloeEmail(value) {
+        if (!ALOE_EMAIL_REGEX.test(value)) {
+          throw new Error('El correo debe seguir el formato 8 dígitos + @aloe.ulima.edu.pe');
+        }
+      }
     },
     set(value) {
       if (typeof value === 'string') {
