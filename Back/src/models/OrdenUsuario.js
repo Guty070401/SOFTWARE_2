@@ -1,23 +1,40 @@
-const { generateId } = require('../utils/id');
+const { DataTypes, Model } = require('sequelize');
+const sequelize = require('../../database/connection');
 
-class OrdenUsuario {
-  constructor({
-    id = generateId('ord_usr_'),
-    ordenId,
-    usuarioId,
-    esPropietario = false,
-    esRepartidor = false
-  }) {
-    this.id = id;
-    this.ordenId = ordenId;
-    this.usuarioId = usuarioId;
-    this.esPropietario = esPropietario;
-    this.esRepartidor = esRepartidor;
-  }
+class OrdenUsuario extends Model {}
 
-  matches(ordenId, usuarioId) {
-    return this.ordenId === ordenId && this.usuarioId === usuarioId;
+OrdenUsuario.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  ordenId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'orden_id'
+  },
+  usuarioId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'usuario_id'
+  },
+  esPropietario: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'es_propietario'
+  },
+  esRepartidor: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'es_repartidor'
   }
-}
+}, {
+  sequelize,
+  modelName: 'OrdenUsuario',
+  tableName: 'orden_usuarios'
+});
 
 module.exports = OrdenUsuario;
