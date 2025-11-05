@@ -1,77 +1,54 @@
+const { DataTypes, Model } = require('sequelize');
 const bcrypt = require('bcrypt');
-const { generateId } = require('../utils/id');
+const sequelize = require('../database/connection');
 
-class Usuario {
-  constructor({
-    id = generateId('usr_'),
-    nombreUsuario,
-    correo,
-    celular = '',
-    passwordHash,
-    foto = null,
-    rol = 'customer',
-    solucion = false
-  }) {
-    this.id = id;
-    this.nombreUsuario = nombreUsuario;
-    this.correo = correo.toLowerCase();
-    this.celular = celular;
-    this.passwordHash = passwordHash;
-    this.foto = foto;
-    this.rol = rol;
-    this.solucion = Boolean(solucion);
-    this.ordenes = new Set();
-    this.tarjetas = new Set();
-    this.activo = true;
-  }
-
-  static async createWithPassword({ password, ...rest }) {
-    const passwordHash = await bcrypt.hash(password, 10);
-    return new Usuario({ ...rest, passwordHash });
-  }
-
+class Usuario extends Model {
   async changePassword(oldPassword, newPassword) {
     const matches = await this.verifyPassword(oldPassword);
     if (!matches) {
       return false;
     }
     this.passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.save();
     return true;
   }
 
-  async verifyPassword(password) {
+  verifyPassword(password) {
     if (!this.passwordHash) {
-      return false;
+      return Promise.resolve(false);
     }
     return bcrypt.compare(password, this.passwordHash);
   }
 
   iniciarSesion() {
     this.activo = true;
+    return this.save();
   }
 
   cerrarSesion() {
     this.activo = false;
+    return this.save();
   }
 
   cambiarModo(nuevoRol) {
     this.rol = nuevoRol;
+    return this.save();
   }
 
   setRole(rol) {
     this.rol = rol;
   }
 
-  agregarOrden(ordenId) {
-    this.ordenes.add(ordenId);
+  agregarOrden() {
+    // handled through associations
   }
 
-  agregarTarjeta(tarjetaId) {
-    this.tarjetas.add(tarjetaId);
+  agregarTarjeta() {
+    // handled through associations
   }
 
-  removerTarjeta(tarjetaId) {
-    this.tarjetas.delete(tarjetaId);
+  removerTarjeta() {
+    // handled through associations
   }
 
   toPublicJSON() {
@@ -85,6 +62,69 @@ class Usuario {
       solucion: this.solucion
     };
   }
+
+  static async createWithPassword({ password, ...rest }, options = {}) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    return this.create({ ...rest, passwordHash }, options);
+  }
 }
+
+Usuario.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  nombreUsuario: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'nombre_usuario'
+  },
+  correo: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: true
+    },
+    set(value) {
+      if (typeof value === 'string') {
+        this.setDataValue('correo', value.toLowerCase());
+      }
+    }
+  },
+  celular: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  passwordHash: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'password_hash'
+  },
+  foto: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  rol: {
+    type: DataTypes.ENUM('customer', 'courier', 'admin'),
+    allowNull: false,
+    defaultValue: 'customer'
+  },
+  solucion: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  activo: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  }
+}, {
+  sequelize,
+  modelName: 'Usuario',
+  tableName: 'usuarios'
+});
 
 module.exports = Usuario;
