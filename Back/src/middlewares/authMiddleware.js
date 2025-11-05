@@ -1,6 +1,6 @@
 const authService = require('../services/authService');
 
-module.exports = (req, res, next) => {
+module.exports = async (req, res, next) => {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ')
     ? header.slice(7)
@@ -14,7 +14,7 @@ module.exports = (req, res, next) => {
 
   try {
     const payload = authService.verifyToken(token);
-    const user = authService.getUserById(payload.id);
+    const user = await authService.getUserById(payload.id);
     if (!user) {
       const error = new Error('Usuario no encontrado');
       error.status = 401;

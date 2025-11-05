@@ -10,18 +10,18 @@ function normaliseItems(items) {
   }));
 }
 
-exports.listOrders = (req, res, next) => {
+exports.listOrders = async (req, res, next) => {
   try {
-    const orders = orderService.listOrdersForUser(req.userEntity);
+    const orders = await orderService.listOrdersForUser(req.userEntity);
     res.json({ orders });
   } catch (error) {
     next(error);
   }
 };
 
-exports.createOrder = (req, res, next) => {
+exports.createOrder = async (req, res, next) => {
   try {
-    const order = orderService.createOrder({
+    const order = await orderService.createOrder({
       customerId: req.userEntity.id,
       storeId: req.body.storeId ?? req.body.tiendaId,
       items: normaliseItems(req.body.items),
@@ -35,18 +35,18 @@ exports.createOrder = (req, res, next) => {
   }
 };
 
-exports.getOrder = (req, res, next) => {
+exports.getOrder = async (req, res, next) => {
   try {
-    const order = orderService.getOrderByIdForUser(req.params.orderId, req.userEntity);
+    const order = await orderService.getOrderByIdForUser(req.params.orderId, req.userEntity);
     res.json({ order });
   } catch (error) {
     next(error);
   }
 };
 
-exports.updateStatus = (req, res, next) => {
+exports.updateStatus = async (req, res, next) => {
   try {
-    const order = orderService.updateStatus(
+    const order = await orderService.updateStatus(
       req.params.orderId,
       req.userEntity,
       req.body.status,

@@ -1,31 +1,7 @@
-const { generateId } = require('../utils/id');
+const { DataTypes, Model } = require('sequelize');
+const sequelize = require('../../database/connection');
 
-class Tienda {
-  constructor({
-    id = generateId('store_'),
-    nombreOrigen,
-    descripcion = '',
-    logo = null,
-    cantidad = 0
-  }) {
-    this.id = id;
-    this.nombreOrigen = nombreOrigen;
-    this.descripcion = descripcion;
-    this.logo = logo;
-    this.productos = new Set();
-    this.cantidad = Number.isFinite(cantidad) ? cantidad : 0;
-  }
-
-  agregarProducto(productoId) {
-    this.productos.add(productoId);
-    this.cantidad = this.productos.size;
-  }
-
-  eliminarProducto(productoId) {
-    this.productos.delete(productoId);
-    this.cantidad = this.productos.size;
-  }
-
+class Tienda extends Model {
   toJSON() {
     return {
       id: this.id,
@@ -36,5 +12,35 @@ class Tienda {
     };
   }
 }
+
+Tienda.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  nombreOrigen: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'nombre_origen'
+  },
+  descripcion: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  logo: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  cantidad: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  }
+}, {
+  sequelize,
+  modelName: 'Tienda',
+  tableName: 'tiendas'
+});
 
 module.exports = Tienda;
