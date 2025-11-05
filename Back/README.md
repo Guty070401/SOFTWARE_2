@@ -2,7 +2,7 @@
 
 Este backend expone un conjunto de endpoints REST respaldados por PostgreSQL que siguen el diagrama de clases provisto.
 
-> **Importante:** Todos los usuarios utilizan correos institucionales en el formato `#########@aloe.ulima.edu.pe` (nueve dígitos).
+> **Importante:** Todos los usuarios utilizan correos institucionales en el formato `########@aloe.ulima.edu.pe` (ocho dígitos).
 
 ## Requisitos
 
@@ -107,7 +107,7 @@ Variables de entorno disponibles:
 
 Al ejecutar `database/schema.sql` tendrás inmediatamente:
 
-- **Usuarios:** un comprador (`201123456@aloe.ulima.edu.pe`) y un repartidor (`200123456@aloe.ulima.edu.pe`), ambos con contraseña `123456`.
+- **Usuarios:** un comprador (`20123456@aloe.ulima.edu.pe`) y un repartidor (`20023456@aloe.ulima.edu.pe`), ambos con contraseña `123456`.
 - **Tiendas y productos:** catálogos pre-cargados de Bembos y La Nevera Fit, listos para consultarse desde `/api/stores`.
 - **Órdenes:** un pedido con historial de estados y asignación de repartidor para probar `/api/orders`.
 
@@ -137,7 +137,7 @@ Si quieres validar rápidamente que todo funciona sin abrir el frontend, puedes 
 # 1) Autentícate con el usuario demo
 curl -X POST http://localhost:3000/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email": "201123456@aloe.ulima.edu.pe", "password": "123456"}'
+  -d '{"email": "20123456@aloe.ulima.edu.pe", "password": "123456"}'
 
 # Guarda el token que devuelve la petición anterior en la variable TOKEN
 export TOKEN="<token_devuelto>"

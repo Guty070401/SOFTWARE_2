@@ -88,7 +88,7 @@ Usuario.init({
     validate: {
       isAloeEmail(value) {
         if (!ALOE_EMAIL_REGEX.test(value)) {
-          throw new Error('El correo debe seguir el formato 9 dígitos + @aloe.ulima.edu.pe');
+          throw new Error('El correo debe seguir el formato 8 dígitos + @aloe.ulima.edu.pe');
         }
       }
     },

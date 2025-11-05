@@ -36,7 +36,7 @@ BEGIN
   ) THEN
     ALTER TABLE usuarios
       ADD CONSTRAINT usuarios_correo_aloe_chk
-      CHECK (correo ~ '^[0-9]{9}@aloe\\.ulima\\.edu\\.pe$')
+      CHECK (correo ~ '^[0-9]{8}@aloe\\.ulima\\.edu\\.pe$')
       NOT VALID;
   END IF;
 
@@ -135,8 +135,8 @@ CREATE TABLE IF NOT EXISTS historial_estados (
 
 INSERT INTO usuarios (id, nombre_usuario, correo, celular, password_hash, rol)
 VALUES
-  ('8d0f0b76-d93b-4a1c-9bfb-08c8d0f8d111', 'Cliente Demo', '201123456@aloe.ulima.edu.pe', '988888888', crypt('123456', gen_salt('bf')), 'customer'),
-  ('d2c0e5b4-3e8b-41f0-8d6a-2b9f1283c222', 'Courier UFOOD', '200123456@aloe.ulima.edu.pe', '999999999', crypt('123456', gen_salt('bf')), 'courier')
+  ('8d0f0b76-d93b-4a1c-9bfb-08c8d0f8d111', 'Cliente Demo', '20123456@aloe.ulima.edu.pe', '988888888', crypt('123456', gen_salt('bf')), 'customer'),
+  ('d2c0e5b4-3e8b-41f0-8d6a-2b9f1283c222', 'Courier UFOOD', '20023456@aloe.ulima.edu.pe', '999999999', crypt('123456', gen_salt('bf')), 'courier')
 ON CONFLICT (correo) DO NOTHING;
 
 INSERT INTO tiendas (id, nombre_origen, descripcion, logo, cantidad)

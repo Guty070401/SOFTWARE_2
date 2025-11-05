@@ -33,7 +33,7 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
 
   const normalizedCorreo = String(correo).toLowerCase();
   if (!ALOE_EMAIL_REGEX.test(normalizedCorreo)) {
-    const error = new Error('El correo debe seguir el formato 9 dígitos + @aloe.ulima.edu.pe');
+    const error = new Error('El correo debe seguir el formato 8 dígitos + @aloe.ulima.edu.pe');
     error.status = 400;
     throw error;
   }

@@ -2,7 +2,7 @@
 
 Aplicación full-stack para la gestión de pedidos de comida, compuesta por un backend en Node.js/Express con PostgreSQL y un frontend en React (Vite).
 
-> **Nota:** Los usuarios del sistema usan correos institucionales `#########@aloe.ulima.edu.pe` (nueve dígitos antes del dominio).
+> **Nota:** Los usuarios del sistema usan correos institucionales `########@aloe.ulima.edu.pe` (ocho dígitos antes del dominio).
 
 ## Requisitos previos
 
@@ -88,7 +88,7 @@ Aplicación full-stack para la gestión de pedidos de comida, compuesta por un b
 
 ## 4. Flujo rápido de verificación
 
-1. Autentícate con el usuario sembrado `201123456@aloe.ulima.edu.pe` / `123456` usando `POST /api/auth/login`.
+1. Autentícate con el usuario sembrado `20123456@aloe.ulima.edu.pe` / `123456` usando `POST /api/auth/login`.
 2. Usa el token devuelto para consultar `GET /api/stores` y visualizar el catálogo desde el frontend.
 3. Genera órdenes de prueba para comprobar el historial de estados y los listados para cada rol.
 
