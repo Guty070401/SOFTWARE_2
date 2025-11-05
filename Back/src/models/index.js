@@ -1,4 +1,4 @@
-const sequelize = require('../database/connection');
+const sequelize = require('../../database/connection');
 const Usuario = require('./Usuario');
 const Tarjeta = require('./Tarjeta');
 const Tienda = require('./Tienda');

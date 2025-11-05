@@ -1,6 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const bcrypt = require('bcrypt');
-const sequelize = require('../database/connection');
+const sequelize = require('../../database/connection');
 const { ALOE_EMAIL_REGEX } = require('../constants/user');
 
 class Usuario extends Model {

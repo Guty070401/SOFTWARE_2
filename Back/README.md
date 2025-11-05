@@ -96,7 +96,7 @@ Variables de entorno disponibles:
 
 ## Estructura interna
 
-- `src/database/connection.js`: Configuración de Sequelize y la conexión a PostgreSQL.
+- `database/connection.js`: Configuración de Sequelize y la conexión a PostgreSQL.
 - `src/models`: Modelos de Sequelize (Usuario, Tienda, Tarjeta, Orden, etc.) y sus asociaciones.
 - `src/services`: Contienen la lógica de negocio sobre los modelos persistentes.
 - `src/controllers`: Traducen las peticiones HTTP a llamadas de servicio.

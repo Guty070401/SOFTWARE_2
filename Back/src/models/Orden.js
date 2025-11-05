@@ -1,5 +1,5 @@
 const { DataTypes, Model } = require('sequelize');
-const sequelize = require('../database/connection');
+const sequelize = require('../../database/connection');
 const { ORDER_STATUS } = require('../constants/orderStatus');
 
 class Orden extends Model {
