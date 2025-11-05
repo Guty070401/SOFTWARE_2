@@ -1,11 +1,14 @@
 # Backend API
 
-Este backend expone un conjunto de endpoints REST en memoria que siguen el diagrama de clases provisto.
+Este backend expone un conjunto de endpoints REST respaldados por PostgreSQL que siguen el diagrama de clases provisto.
+
+> **Importante:** Todos los usuarios utilizan correos institucionales en el formato `#########@aloe.ulima.edu.pe` (nueve dígitos).
 
 ## Requisitos
 
 - Node.js 20+
 - npm
+- PostgreSQL 14+ (o una instancia compatible)
 
 ## Instalación
 
@@ -16,18 +19,56 @@ npm install
 
 > **Nota:** Durante la instalación `bcrypt` necesita descargar un binario. Si se está detrás de un proxy, configure las variables `npm_config_proxy` y `npm_config_https_proxy` o instale `build-essential` para permitir que npm compile el módulo.
 
+## Configuración de la base de datos
+
+1. Ajuste la contraseña del usuario que usará la aplicación. Si utiliza el usuario `postgres` por defecto, puede establecer la contraseña `Guty` con:
+
+   ```sql
+   ALTER ROLE postgres WITH PASSWORD 'Guty';
+   ```
+
+   Si ya cuenta con una contraseña distinta, solo actualice el `.env` con ese valor.
+
+2. Cree una base de datos vacía en PostgreSQL:
+
+   ```sql
+   CREATE DATABASE "Software";
+   ```
+
+3. Ejecute el script `database/schema.sql` para generar las tablas, tipos y datos de ejemplo necesarios:
+
+   ```bash
+   psql -U postgres -d "Software" -f database/schema.sql
+   ```
+
+   Ajuste el usuario, host o puerto según su entorno. El script crea usuarios, tiendas, productos y una orden de demostración lista para probar los endpoints.
+
+4. Configure las credenciales en un archivo `.env` dentro del directorio `Back/` (el repositorio incluye un ejemplo con la contraseña `Guty`):
+
+   ```env
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=Software
+   DB_USER=postgres
+   DB_PASSWORD=Guty
+   JWT_SECRET=super-secreto
+   CORS_ORIGIN=http://localhost:5173
+   ```
+
 ## Ejecución
 
-Ambos scripts levantan el servidor en `http://localhost:3000`:
+Ambos scripts levantan el servidor en `http://localhost:3000` una vez que la conexión a PostgreSQL es válida:
 
 ```bash
 npm run dev   # recarga automática con nodemon
 npm start     # ejecución simple
 ```
 
-Puede configurar las variables de entorno en un archivo `.env`. Las más relevantes son:
+Variables de entorno disponibles:
 
 - `PORT`: Puerto HTTP (por defecto 3000)
+- `DB_*`: Credenciales de PostgreSQL (host, puerto, nombre, usuario y contraseña)
+- `DB_LOGGING`: Establezca `true` para ver las consultas SQL en consola
 - `JWT_SECRET`: Clave usada para firmar tokens
 - `CORS_ORIGIN`: Lista separada por comas de orígenes permitidos
 
@@ -55,22 +96,22 @@ Puede configurar las variables de entorno en un archivo `.env`. Las más relevan
 
 ## Estructura interna
 
-- `src/models`: Modelos en memoria que representan el diagrama de clases (Usuario, Tienda, Tarjeta, Orden, etc.).
-- `src/services`: Contienen la lógica de negocio y actualizan los modelos.
+- `src/database/connection.js`: Configuración de Sequelize y la conexión a PostgreSQL.
+- `src/models`: Modelos de Sequelize (Usuario, Tienda, Tarjeta, Orden, etc.) y sus asociaciones.
+- `src/services`: Contienen la lógica de negocio sobre los modelos persistentes.
 - `src/controllers`: Traducen las peticiones HTTP a llamadas de servicio.
 - `src/routes`: Define los endpoints y middlewares de autorización.
-- `src/data/database.js`: Fuente de datos en memoria y generadores de IDs.
-- `src/seed/seedData.js`: Carga datos de ejemplo al iniciar el servidor.
+- `src/seed/seedData.js`: Carga datos de ejemplo directamente en la base de datos.
 
 ## Datos de ejemplo
 
-El servidor se inicializa con:
+Al ejecutar `database/schema.sql` tendrás inmediatamente:
 
-- **Usuarios:** un comprador de prueba y un repartidor.
-- **Tiendas:** tres restaurantes con sus productos destacados.
-- **Órdenes:** un pedido de ejemplo con historial de estados para probar el flujo de seguimiento.
+- **Usuarios:** un comprador (`201123456@aloe.ulima.edu.pe`) y un repartidor (`200123456@aloe.ulima.edu.pe`), ambos con contraseña `123456`.
+- **Tiendas y productos:** catálogos pre-cargados de Bembos y La Nevera Fit, listos para consultarse desde `/api/stores`.
+- **Órdenes:** un pedido con historial de estados y asignación de repartidor para probar `/api/orders`.
 
-Puede modificar `src/seed/seedData.js` para adaptar los datos iniciales al frontend.
+Adicionalmente, el servidor ejecuta `src/seed/seedData.js` al iniciar para completar catálogos más extensos si detecta una base vacía. Puedes adaptar ese archivo o el propio `schema.sql` para personalizar los datos base.
 
 ## Uso con el frontend
 
@@ -96,7 +137,7 @@ Si quieres validar rápidamente que todo funciona sin abrir el frontend, puedes 
 # 1) Autentícate con el usuario demo
 curl -X POST http://localhost:3000/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email": "cliente@ufood.com", "password": "123456"}'
+  -d '{"email": "201123456@aloe.ulima.edu.pe", "password": "123456"}'
 
 # Guarda el token que devuelve la petición anterior en la variable TOKEN
 export TOKEN="<token_devuelto>"
