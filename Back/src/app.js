@@ -8,8 +8,6 @@ const userRoutes = require('./routes/userRoutes');
 const storeRoutes = require('./routes/storeRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const errorMiddleware = require('./middlewares/errorMiddleware');
-const seedData = require('./seed/seedData');
-
 const app = express();
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
@@ -23,11 +21,6 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-
-seedData().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Error al inicializar datos de ejemplo', error);
-});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

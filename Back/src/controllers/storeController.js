@@ -1,8 +1,8 @@
 const storeService = require('../services/storeService');
 
-exports.listStores = (req, res, next) => {
+exports.listStores = async (req, res, next) => {
   try {
-    const stores = storeService.listStores();
+    const stores = await storeService.listStores();
     res.json({ stores });
   } catch (error) {
     next(error);

@@ -1,11 +1,16 @@
-const { tiendas, productos } = require('../data/database');
+const { Tienda, Producto } = require('../models');
 
 function mapProduct(product) {
   if (!product) {
     return null;
   }
-  const { storeId, ...rest } = product.toJSON();
-  return rest;
+  return {
+    id: product.id,
+    name: product.nombre,
+    desc: product.descripcion,
+    image: product.foto,
+    price: Number(product.precio)
+  };
 }
 
 function mapStore(store, { includeItems = true } = {}) {
@@ -13,39 +18,39 @@ function mapStore(store, { includeItems = true } = {}) {
     return null;
   }
 
-  const storeData = store.toJSON();
-  const items = includeItems
-    ? Array.from(store.productos)
-      .map((productId) => mapProduct(productos.get(productId)))
-      .filter(Boolean)
-    : null;
-
   const dto = {
-    id: storeData.id,
-    name: storeData.name,
-    desc: storeData.desc,
-    image: storeData.logo,
-    logo: storeData.logo,
-    cantidad: storeData.cantidad
+    id: store.id,
+    name: store.nombreOrigen,
+    desc: store.descripcion,
+    image: store.logo,
+    logo: store.logo,
+    cantidad: typeof store.cantidad === 'number' ? store.cantidad : (store.productos?.length || 0)
   };
 
   if (includeItems) {
+    const items = (store.productos || store.Productos || [])
+      .map(mapProduct)
+      .filter(Boolean);
     dto.items = items;
   }
 
   return dto;
 }
 
-function listStores() {
-  return Array.from(tiendas.values()).map((store) => mapStore(store, { includeItems: true }));
+async function listStores() {
+  const stores = await Tienda.findAll({
+    include: [{ model: Producto, as: 'productos' }],
+    order: [['nombre_origen', 'ASC']]
+  });
+  return stores.map((store) => mapStore({ ...store.get(), productos: store.productos }, { includeItems: true }));
 }
 
-function getStore(storeId) {
-  return tiendas.get(storeId) || null;
+async function getStore(storeId) {
+  return Tienda.findByPk(storeId, { include: [{ model: Producto, as: 'productos' }] });
 }
 
-function getProduct(productId) {
-  return productos.get(productId) || null;
+async function getProduct(productId) {
+  return Producto.findByPk(productId);
 }
 
 module.exports = {
