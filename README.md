@@ -74,10 +74,14 @@ Aplicación full-stack para la gestión de pedidos de comida, compuesta por un b
    npm install
    ```
 
-2. (Opcional) Define un archivo `.env` si quieres apuntar a un backend distinto. Por defecto el cliente usa `http://localhost:3000/api`, pero puedes sobrescribirlo con:
+2. (Opcional) Define un archivo `.env` si quieres apuntar a un backend distinto. El cliente utiliza rutas relativas (`/api`) y en desarrollo Vite proxya automáticamente hacia `http://localhost:3000`, pero puedes sobrescribir el destino con:
 
    ```env
-   VITE_API_URL=http://tu-backend:3000/api
+   # Cambia la URL base que usarán las peticiones del cliente
+   VITE_API_URL=https://tu-backend/api
+
+   # (solo desarrollo) especifica otro origen para el proxy de Vite
+   VITE_API_PROXY_TARGET=http://tu-backend:3000
    ```
 
 3. Inicia el servidor de desarrollo de Vite:
