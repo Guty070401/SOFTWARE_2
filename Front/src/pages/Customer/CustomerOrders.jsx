@@ -4,74 +4,38 @@ import { EVENTS } from "../../oop/state/events";
 import withNavigate from "../../oop/router/withNavigate";
 
 class CustomerOrders extends React.Component {
-  state = { orders: [], loading: false };
+  state = { orders: [] };
 
   componentDidMount() {
-    this.unsubOrders = appState.on(EVENTS.ORDERS_CHANGED, (orders) => this.setState({ orders }));
-    this.unsubAuth = appState.on(EVENTS.AUTH_CHANGED, (user) => {
-      if (!user) {
-        this.setState({ orders: [] });
-      } else {
-        this.fetchOrders();
-      }
-    });
+    this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders) =>
+      this.setState({ orders })
+    );
     this.setState({ orders: appState.orders });
-    if (appState.user) {
-      this.fetchOrders();
-    }
   }
 
   componentWillUnmount() {
-    this.unsubOrders && this.unsubOrders();
-    this.unsubAuth && this.unsubAuth();
-  }
-
-  async fetchOrders() {
-    this.setState({ loading: true });
-    try {
-      await appState.loadOrders(true);
-    } finally {
-      this.setState({ loading: false });
-    }
+    this.unsub && this.unsub();
   }
 
   openOrder(id) {
-    this.props.navigate(`/courier/order/${id}`);
+    this.props.navigate(`/courier/order/${id}`); // usa la misma vista de detalle
   }
 
   volverATienda() {
-    this.props.navigate("/customer");
+    this.props.navigate("/customer"); // redirige al main o tienda
   }
 
   render() {
-    if (!appState.user) {
-      return (
-        <section>
-          <div className="card">
-            <p className="text-slate-500">Inicia sesión para ver tus pedidos.</p>
-            <button className="btn btn-primary mt-3" onClick={() => this.props.navigate("/", { replace: true })}>
-              Ir al inicio
-            </button>
-          </div>
-        </section>
-      );
-    }
-
-    const { orders, loading } = this.state;
+    const { orders } = this.state;
 
     return (
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold">Pedidos Realizados</h1>
-          <button className="pill" onClick={() => this.fetchOrders()} disabled={loading}>
-            {loading ? "Actualizando..." : "Actualizar"}
-          </button>
-        </div>
+        <h1 className="text-2xl font-semibold mb-4">Pedidos Realizados</h1>
 
         {!orders.length ? (
           <div className="card text-center">
             <p className="text-slate-500 mb-4">
-              {loading ? "Cargando pedidos..." : "Aún no has realizado ningún pedido."}
+              Aún no has realizado ningún pedido.
             </p>
             <button
               onClick={() => this.volverATienda()}
@@ -89,9 +53,6 @@ class CustomerOrders extends React.Component {
                     <div>
                       <p className="text-sm text-slate-500">Pedido</p>
                       <p className="font-semibold">#{o.id}</p>
-                      {o.store?.name && (
-                        <p className="text-xs text-slate-500 mt-1">{o.store.name}</p>
-                      )}
                     </div>
                     <span className="pill capitalize">{o.status}</span>
                   </div>
@@ -99,7 +60,7 @@ class CustomerOrders extends React.Component {
                     {o.items.length} ítems
                   </p>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="font-semibold">S/ {Number(o.total ?? 0).toFixed(2)}</span>
+                    <span className="font-semibold">S/ {o.total}</span>
                     <button
                       className="btn btn-primary"
                       onClick={() => this.openOrder(o.id)}
@@ -111,6 +72,7 @@ class CustomerOrders extends React.Component {
               ))}
             </div>
 
+            {/* Botón de volver a tienda debajo de los pedidos */}
             <div className="flex justify-center mt-8">
               <button
                 onClick={() => this.volverATienda()}
