@@ -14,4 +14,13 @@ export default class StoreService {
     const data = await this.api.post('/stores', payload);
     return data?.store || null;
   }
+
+  async createProduct(storeId, payload = {}){
+    if (!storeId) {
+      throw new Error('storeId es obligatorio');
+    }
+    const path = `/stores/${encodeURIComponent(storeId)}/products`;
+    const data = await this.api.post(path, payload);
+    return data?.product || null;
+  }
 }

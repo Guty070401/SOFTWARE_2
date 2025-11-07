@@ -87,9 +87,61 @@ async function getProduct(productId) {
   return Producto.findByPk(productId);
 }
 
+async function createProduct(storeId, payload = {}) {
+  const resolvedStoreId = String(storeId || '').trim();
+  if (!resolvedStoreId) {
+    const error = new Error('El identificador de la tienda es obligatorio.');
+    error.status = 400;
+    throw error;
+  }
+
+  const store = await getStore(resolvedStoreId);
+  if (!store) {
+    const error = new Error('Tienda no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  const nombre = pickString(payload.name, payload.nombre, payload.nombreOrigen, payload.title);
+  if (!nombre) {
+    const error = new Error('El nombre del producto es obligatorio.');
+    error.status = 400;
+    throw error;
+  }
+
+  const priceSource = payload.price ?? payload.precio ?? payload.unitPrice;
+  const priceValue = Number(priceSource);
+  if (!Number.isFinite(priceValue) || priceValue < 0) {
+    const error = new Error('El precio del producto es inválido.');
+    error.status = 400;
+    throw error;
+  }
+  const precio = priceValue.toFixed(2);
+
+  const descripcion = pickString(payload.desc, payload.descripcion, payload.description) || null;
+  const foto = pickString(payload.image, payload.foto, payload.photo, payload.imagen) || null;
+
+  const product = await Producto.create({
+    tiendaId: store.id,
+    nombre,
+    descripcion,
+    foto,
+    precio
+  });
+
+  const storeData = store.get ? store.get({ plain: true }) : store;
+
+  return mapProduct(product.get({ plain: true }), {
+    ...storeData,
+    id: store.id,
+    nombreOrigen: storeData?.nombreOrigen ?? storeData?.name ?? ''
+  });
+}
+
 module.exports = {
   listStores,
   createStore,
+  createProduct,
   getStore,
   getProduct,
   mapStore,

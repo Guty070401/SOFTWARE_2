@@ -241,43 +241,81 @@ export default class CustomerHome extends React.Component {
   // -------------------------
   // CRUD de productos (Front)
   // -------------------------
-  addProductToStore = (storeId) => {
+  addProductToStore = async (storeId) => {
+    if (!appState.user) {
+      alert('Debes iniciar sesión para agregar productos.');
+      return;
+    }
+
     const name = prompt("Nombre del producto:");
     if (!name) return;
 
     const priceStr = prompt("Precio (por ejemplo, 25.90):", "0");
-    const price = Number(priceStr);
-    if (Number.isNaN(price)) return alert("Precio inválido.");
+    const priceValue = Number(priceStr);
+    if (!Number.isFinite(priceValue)) {
+      alert("Precio inválido.");
+      return;
+    }
 
     const desc = prompt("Descripción corta:", "") || "";
     const imageInput = prompt("URL de imagen (opcional). Si está vacío, se usará un placeholder:", "") || "";
     const image = imageInput.trim() || PRODUCT_IMAGE_PLACEHOLDER;
 
     const storeIdStr = String(storeId);
-    const store = this.state.stores.find((s) => String(s.id) === storeIdStr) || DEFAULT_STORES.find((s) => String(s.id) === storeIdStr) || { name: "" };
-    const normalizedPrice = Number(price.toFixed(2));
+    const store = this.state.stores.find((s) => String(s.id) === storeIdStr)
+      || DEFAULT_STORES.find((s) => String(s.id) === storeIdStr);
 
-    const newItem = {
-      id: `p_${Date.now()}`, // id local simple
-      name,
-      price: normalizedPrice,
-      desc,
-      image,
-      storeId,
-      storeName: store.name
-    };
+    if (!store) {
+      alert('No se encontró la tienda seleccionada.');
+      return;
+    }
 
-    const next = this.state.stores.map(s => {
-      if (String(s.id) === storeIdStr) {
-        const items = Array.isArray(s.items) ? [...s.items, newItem] : [newItem];
-        return { ...s, items };
+    const normalizedPrice = Number(priceValue.toFixed(2));
+
+    this.setState({ loadingStores: true, error: null });
+    try {
+      const created = await this.storeService.createProduct(storeId, {
+        name,
+        nombre: name,
+        desc,
+        descripcion: desc,
+        image,
+        foto: image,
+        price: normalizedPrice,
+        precio: normalizedPrice
+      });
+
+      const productData = normaliseProductForStore(created, store) || {
+        id: created?.id || `p_${Date.now()}`,
+        name,
+        price: normalizedPrice,
+        desc,
+        image,
+        storeId: store.id,
+        storeName: store.name
+      };
+
+      const next = this.state.stores.map(s => {
+        if (String(s.id) === storeIdStr) {
+          const items = Array.isArray(s.items) ? [...s.items, productData] : [productData];
+          return { ...s, items };
+        }
+        return s;
+      });
+
+      this.saveStores(next);
+      if (this.state.selectedStoreId !== storeIdStr) {
+        this.setState({ selectedStoreId: storeIdStr });
       }
-      return s;
-    });
-
-    this.saveStores(next);
-    if (this.state.selectedStoreId !== storeIdStr) {
-      this.setState({ selectedStoreId: storeIdStr });
+    } catch (error) {
+      console.error('No se pudo crear el producto en el backend:', error);
+      const message = error?.message || 'No se pudo agregar el producto.';
+      this.setState({ error: message });
+      alert(message);
+    } finally {
+      if (this._mounted) {
+        this.setState({ loadingStores: false });
+      }
     }
   };
 
