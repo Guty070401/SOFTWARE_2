@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const {
   sequelize,
   Orden,
@@ -99,12 +100,13 @@ async function userHasAccessToOrder(user, orderId, transaction) {
   if (user.rol === 'admin') {
     return true;
   }
-  const where = { ordenId: orderId, usuarioId: user.id };
-  if (user.rol === 'courier') {
-    where.esRepartidor = true;
-  } else {
-    where.esPropietario = true;
-  }
+
+  const baseWhere = { ordenId: orderId, usuarioId: user.id };
+
+  const where = user.rol === 'courier'
+    ? { ...baseWhere, [Op.or]: [{ esRepartidor: true }, { esPropietario: true }] }
+    : { ...baseWhere, esPropietario: true };
+
   const link = await OrdenUsuario.findOne({ where, transaction });
   return Boolean(link);
 }
@@ -114,12 +116,10 @@ async function listOrdersForUser(user) {
   if (user.rol === 'admin') {
     orders = await Orden.findAll({ include: orderIncludes, order: [['created_at', 'DESC']] });
   } else {
-    const where = { usuarioId: user.id };
-    if (user.rol === 'courier') {
-      where.esRepartidor = true;
-    } else {
-      where.esPropietario = true;
-    }
+    const where = user.rol === 'courier'
+      ? { usuarioId: user.id, [Op.or]: [{ esRepartidor: true }, { esPropietario: true }] }
+      : { usuarioId: user.id, esPropietario: true };
+
     const links = await OrdenUsuario.findAll({ where });
     const orderIds = links.map((link) => link.ordenId);
     if (!orderIds.length) {

@@ -10,11 +10,9 @@ async function startServer() {
     await sequelize.sync();
     await seedData();
     app.listen(PORT, () => {
-      // eslint-disable-next-line no-console
       console.log(`Servidor escuchando en http://localhost:${PORT}`);
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error al inicializar la aplicación', error);
     process.exit(1);
   }
