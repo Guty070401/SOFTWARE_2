@@ -8,3 +8,12 @@ exports.listStores = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.createStore = async (req, res, next) => {
+  try {
+    const store = await storeService.createStore(req.body || {});
+    res.status(201).json({ store });
+  } catch (error) {
+    next(error);
+  }
+};

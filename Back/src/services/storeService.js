@@ -50,6 +50,35 @@ async function listStores() {
   return stores.map((store) => mapStore({ ...store.get(), productos: store.productos }, { includeItems: true }));
 }
 
+function pickString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
+async function createStore(payload = {}) {
+  const nombreOrigen = pickString(payload.name, payload.nombre, payload.nombreOrigen);
+  if (!nombreOrigen) {
+    const error = new Error('El nombre de la tienda es obligatorio.');
+    error.status = 400;
+    throw error;
+  }
+
+  const descripcion = pickString(payload.desc, payload.descripcion, payload.description) || null;
+  const logo = pickString(payload.logo, payload.image, payload.imagen) || null;
+
+  const store = await Tienda.create({
+    nombreOrigen,
+    descripcion,
+    logo
+  });
+
+  return mapStore({ ...store.get({ plain: true }), productos: [] }, { includeItems: true });
+}
+
 async function getStore(storeId) {
   return Tienda.findByPk(storeId, { include: [{ model: Producto, as: 'productos' }] });
 }
@@ -60,6 +89,7 @@ async function getProduct(productId) {
 
 module.exports = {
   listStores,
+  createStore,
   getStore,
   getProduct,
   mapStore,

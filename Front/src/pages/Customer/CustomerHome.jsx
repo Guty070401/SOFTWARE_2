@@ -300,21 +300,50 @@ export default class CustomerHome extends React.Component {
   // -------------------------
   // CRUD de tiendas (Front)
   // -------------------------
-  addStore = () => {
-    const name = prompt("Nombre de la tienda:");
+  addStore = async () => {
+    if (!appState.user) {
+      alert('Debes iniciar sesión para agregar tiendas.');
+      return;
+    }
+
+    const nameInput = prompt("Nombre de la tienda:");
+    if (!nameInput) return;
+
+    const name = nameInput.trim();
     if (!name) return;
 
-    const desc = prompt("Descripción corta:", "") || "";
+    const descInput = prompt("Descripción corta:", "") || "";
+    const desc = descInput.trim();
     const imageInput = prompt("URL de logo/imagen (opcional):", "") || "";
     const image = imageInput.trim() || STORE_IMAGE_PLACEHOLDER;
 
-    const id = `s_${Date.now()}`;
-    const newStore = { id, name, desc, image, items: [] };
-
-    const next = [...this.state.stores, newStore];
-    this.saveStores(next);
-    // Abrimos la nueva tienda para que agregues productos
-    this.setState({ selectedStoreId: id, filterStoreId: "all" });
+    this.setState({ loadingStores: true, error: null });
+    try {
+      const created = await this.storeService.createStore({
+        name,
+        desc,
+        descripcion: desc,
+        image,
+        logo: image
+      });
+      const normalised = normaliseStoreData(created) || {
+        id: created?.id || `s_${Date.now()}`,
+        name,
+        desc,
+        image,
+        items: []
+      };
+      const next = [...this.state.stores, normalised];
+      this.saveStores(next);
+      this.setState({ selectedStoreId: normalised.id, filterStoreId: "all" });
+    } catch (error) {
+      console.error('No se pudo crear la tienda en el backend:', error);
+      const message = error?.message || 'No se pudo crear la tienda.';
+      this.setState({ error: message });
+      alert(message);
+    } finally {
+      this.setState({ loadingStores: false });
+    }
   };
 
   removeStore = (storeId) => {
