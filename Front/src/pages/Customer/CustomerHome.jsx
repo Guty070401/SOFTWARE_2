@@ -319,10 +319,40 @@ export default class CustomerHome extends React.Component {
     }
   };
 
-  removeProductFromStore = (storeId, itemId) => {
+  removeProductFromStore = async (storeId, itemId) => {
+    if (!appState.user) {
+      alert('Debes iniciar sesión para eliminar productos.');
+      return;
+    }
     if (!confirm("¿Eliminar este producto del catálogo?")) return;
 
     const storeIdStr = String(storeId);
+    let allowLocalUpdate = true;
+
+    if (this._mounted) {
+      this.setState({ loadingStores: true, error: null });
+    }
+
+    try {
+      await this.storeService.deleteProduct(storeId, itemId);
+    } catch (error) {
+      if (error?.status === 404) {
+        console.warn('Producto no encontrado en el backend, se eliminará localmente.');
+      } else {
+        allowLocalUpdate = false;
+        const message = error?.message || 'No se pudo eliminar el producto.';
+        if (this._mounted) {
+          this.setState({ error: message });
+        }
+        alert(message);
+      }
+    } finally {
+      if (this._mounted) {
+        this.setState({ loadingStores: false });
+      }
+    }
+
+    if (!allowLocalUpdate) return;
 
     const next = this.state.stores.map(s => {
       if (String(s.id) === storeIdStr) {
@@ -384,17 +414,50 @@ export default class CustomerHome extends React.Component {
     }
   };
 
-  removeStore = (storeId) => {
+  removeStore = async (storeId) => {
+    if (!appState.user) {
+      alert('Debes iniciar sesión para eliminar tiendas.');
+      return;
+    }
     if (!confirm("¿Eliminar esta tienda y todos sus productos?")) return;
 
     const storeIdStr = String(storeId);
+    let allowLocalUpdate = true;
+
+    if (this._mounted) {
+      this.setState({ loadingStores: true, error: null });
+    }
+
+    try {
+      await this.storeService.deleteStore(storeId);
+    } catch (error) {
+      if (error?.status === 404) {
+        console.warn('Tienda no encontrada en el backend, se eliminará localmente.');
+      } else {
+        allowLocalUpdate = false;
+        const message = error?.status === 409
+          ? 'La tienda tiene pedidos asociados y no puede eliminarse.'
+          : (error?.message || 'No se pudo eliminar la tienda.');
+        if (this._mounted) {
+          this.setState({ error: message });
+        }
+        alert(message);
+      }
+    } finally {
+      if (this._mounted) {
+        this.setState({ loadingStores: false });
+      }
+    }
+
+    if (!allowLocalUpdate) return;
+
     const next = this.state.stores.filter((s) => String(s.id) !== storeIdStr);
     this.saveStores(next);
 
     const patch = {};
     if (this.state.selectedStoreId === storeIdStr) patch.selectedStoreId = null;
     if (this.state.filterStoreId === storeIdStr) patch.filterStoreId = "all";
-    if (Object.keys(patch).length) this.setState(patch);
+    if (Object.keys(patch).length && this._mounted) this.setState(patch);
   };
 
   // Restablecer catálogo de fábrica

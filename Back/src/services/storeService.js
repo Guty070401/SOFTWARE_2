@@ -1,4 +1,9 @@
-const { Tienda, Producto } = require('../models');
+const {
+  Tienda,
+  Producto,
+  Orden,
+  OrdenProducto
+} = require('../models');
 
 function mapProduct(product, store) {
   if (!product) {
@@ -138,10 +143,90 @@ async function createProduct(storeId, payload = {}) {
   });
 }
 
+async function deleteStore(storeId) {
+  const resolvedStoreId = String(storeId || '').trim();
+  if (!resolvedStoreId) {
+    const error = new Error('El identificador de la tienda es obligatorio.');
+    error.status = 400;
+    throw error;
+  }
+
+  const store = await getStore(resolvedStoreId);
+  if (!store) {
+    const error = new Error('Tienda no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  const plainStore = store.get ? store.get({ plain: true }) : store;
+
+  const relatedOrders = await Orden.count({ where: { tiendaId: store.id } });
+  if (relatedOrders > 0) {
+    const error = new Error('No se puede eliminar la tienda porque tiene pedidos asociados.');
+    error.status = 409;
+    throw error;
+  }
+
+  await store.destroy();
+
+  return mapStore({ ...plainStore, productos: [] }, { includeItems: false });
+}
+
+async function deleteProduct(storeId, productId) {
+  const resolvedStoreId = String(storeId || '').trim();
+  if (!resolvedStoreId) {
+    const error = new Error('El identificador de la tienda es obligatorio.');
+    error.status = 400;
+    throw error;
+  }
+
+  const resolvedProductId = String(productId || '').trim();
+  if (!resolvedProductId) {
+    const error = new Error('El identificador del producto es obligatorio.');
+    error.status = 400;
+    throw error;
+  }
+
+  const store = await getStore(resolvedStoreId);
+  if (!store) {
+    const error = new Error('Tienda no encontrada.');
+    error.status = 404;
+    throw error;
+  }
+
+  const product = await Producto.findOne({
+    where: { id: resolvedProductId, tiendaId: store.id }
+  });
+
+  if (!product) {
+    const error = new Error('Producto no encontrado en la tienda.');
+    error.status = 404;
+    throw error;
+  }
+
+  const relatedOrderItems = await OrdenProducto.count({ where: { productoId: product.id } });
+  if (relatedOrderItems > 0) {
+    const error = new Error('No se puede eliminar el producto porque está asociado a pedidos.');
+    error.status = 409;
+    throw error;
+  }
+
+  const plainProduct = product.get ? product.get({ plain: true }) : product;
+
+  await product.destroy();
+
+  return mapProduct(plainProduct, {
+    id: store.id,
+    nombreOrigen: store.nombreOrigen || store.name || ''
+  });
+}
+
 module.exports = {
   listStores,
   createStore,
   createProduct,
+  deleteStore,
+  deleteProduct,
   getStore,
   getProduct,
   mapStore,

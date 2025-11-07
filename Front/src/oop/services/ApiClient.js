@@ -114,4 +114,8 @@ export default class ApiClient {
   patch(path, body, options){
     return this.request(path, { ...options, method: 'PATCH', body });
   }
+
+  delete(path, options){
+    return this.request(path, { ...options, method: 'DELETE' });
+  }
 }

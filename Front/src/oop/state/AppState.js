@@ -1,6 +1,7 @@
 import { EVENTS } from "./events.js";
 import AuthService from "../services/AuthService.js";
 import OrderService from "../services/OrderService.js";
+import UserService from "../services/UserService.js";
 import Item from "../models/Item.js";
 
 class AppState {
@@ -11,9 +12,21 @@ class AppState {
     this.user = null;
     this.cart = /** @type {Item[]} */([]);
     this.orders = [];
+    this.cards = [];
     // Servicios
     this.auth = new AuthService();
     this.orderSrv = new OrderService();
+    this.userSrv = new UserService();
+
+    this.user = this.auth.getStoredUser();
+    if (this.user) {
+      this.refreshOrders().catch((error) => {
+        console.warn('No se pudieron cargar los pedidos iniciales:', error);
+      });
+      this.refreshCards().catch((error) => {
+        console.warn('No se pudieron cargar las tarjetas iniciales:', error);
+      });
+    }
 
     this.user = this.auth.getStoredUser();
     if (this.user) {
@@ -51,20 +64,29 @@ class AppState {
   async login(email, pass){
     this.user = await this.auth.login(email, pass);
     this.emit(EVENTS.AUTH_CHANGED, this.user);
-    await this.refreshOrders().catch(() => {});
+    await Promise.all([
+      this.refreshOrders().catch(() => {}),
+      this.refreshCards().catch(() => {})
+    ]);
     return this.user;
   }
   async register(payload){
     this.user = await this.auth.register(payload);
     this.emit(EVENTS.AUTH_CHANGED, this.user);
-    await this.refreshOrders().catch(() => {});
+    await Promise.all([
+      this.refreshOrders().catch(() => {}),
+      this.refreshCards().catch(() => {})
+    ]);
     return this.user;
   }
   async setRole(role){
     if (!this.user) return null;
     this.user = await this.auth.updateRole(role);
     this.emit(EVENTS.AUTH_CHANGED, this.user);
-    await this.refreshOrders(true).catch(() => {});
+    await Promise.all([
+      this.refreshOrders(true).catch(() => {}),
+      this.refreshCards(true).catch(() => {})
+    ]);
     return this.user;
   }
   logout(){
@@ -72,9 +94,11 @@ class AppState {
     this.user = null;
     this.cart = [];
     this.orders = [];
+    this.cards = [];
     this.emit(EVENTS.AUTH_CHANGED, null);
     this.emit(EVENTS.CART_CHANGED, this.cart);
     this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+    this.emit(EVENTS.CARDS_CHANGED, this.cards);
   }
 
   // --- Cart ---
@@ -125,6 +149,42 @@ class AppState {
       console.error('No se pudieron obtener los pedidos:', error);
       throw error;
     }
+  }
+
+  async refreshCards(force = false){
+    if (!this.user) {
+      this.cards = [];
+      this.emit(EVENTS.CARDS_CHANGED, this.cards);
+      return [];
+    }
+    if (!force && this.cards.length) {
+      return this.cards;
+    }
+    const cards = await this.userSrv.listCards();
+    this.cards = Array.isArray(cards) ? cards : [];
+    this.emit(EVENTS.CARDS_CHANGED, this.cards);
+    return this.cards;
+  }
+
+  async addCard(cardData){
+    if (!this.user) {
+      throw new Error('Debes iniciar sesión para registrar una tarjeta.');
+    }
+    const card = await this.userSrv.addCard(cardData);
+    if (card) {
+      this.cards = [...this.cards, card];
+      this.emit(EVENTS.CARDS_CHANGED, this.cards);
+    }
+    return card;
+  }
+
+  async removeCard(cardId){
+    if (!this.user) {
+      throw new Error('Debes iniciar sesión para eliminar una tarjeta.');
+    }
+    await this.userSrv.removeCard(cardId);
+    this.cards = this.cards.filter((card) => String(card.id) !== String(cardId));
+    this.emit(EVENTS.CARDS_CHANGED, this.cards);
   }
 
   async placeOrder(details = {}){

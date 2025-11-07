@@ -27,3 +27,22 @@ exports.createProduct = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.deleteStore = async (req, res, next) => {
+  try {
+    const store = await storeService.deleteStore(req.params.storeId);
+    res.json({ store });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.deleteProduct = async (req, res, next) => {
+  try {
+    const { storeId, productId } = req.params;
+    const product = await storeService.deleteProduct(storeId, productId);
+    res.json({ product });
+  } catch (error) {
+    next(error);
+  }
+};
