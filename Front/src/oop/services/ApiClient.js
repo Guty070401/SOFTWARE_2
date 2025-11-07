@@ -1,24 +1,71 @@
 const TOKEN_STORAGE_KEY = "ufood_token";
 
+function normaliseBaseUrl(input) {
+  if (typeof input !== "string") {
+    return null;
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const ensurePath = (path) => {
+    const withoutTrailingSlash = path.replace(/\/+$/, "");
+    if (!withoutTrailingSlash || withoutTrailingSlash === "/") {
+      return "/api";
+    }
+    return withoutTrailingSlash.startsWith("/") ? withoutTrailingSlash : `/${withoutTrailingSlash}`;
+  };
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      url.pathname = ensurePath(url.pathname || "/");
+      return url.toString().replace(/\/$/, "");
+    } catch {
+      return null;
+    }
+  }
+
+  const path = ensurePath(trimmed);
+  return path;
+}
+
 function resolveBaseUrl() {
   if (typeof import.meta !== "undefined" && import.meta?.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const explicit = normaliseBaseUrl(import.meta.env.VITE_API_URL);
+    if (explicit) {
+      return explicit;
+    }
   }
+
   if (typeof window !== "undefined") {
     if (window.__API_URL__) {
-      return window.__API_URL__;
+      const injected = normaliseBaseUrl(window.__API_URL__);
+      if (injected) {
+        return injected;
+      }
     }
     if (window.location) {
       return "/api";
     }
   }
+
   const globalProcess = typeof globalThis !== "undefined" ? globalThis.process : undefined;
   if (globalProcess?.env?.VITE_API_URL) {
-    return globalProcess.env.VITE_API_URL;
+    const envUrl = normaliseBaseUrl(globalProcess.env.VITE_API_URL);
+    if (envUrl) {
+      return envUrl;
+    }
   }
   if (globalProcess?.env?.API_URL) {
-    return globalProcess.env.API_URL;
+    const legacyUrl = normaliseBaseUrl(globalProcess.env.API_URL);
+    if (legacyUrl) {
+      return legacyUrl;
+    }
   }
+
   return "http://localhost:3000/api";
 }
 
