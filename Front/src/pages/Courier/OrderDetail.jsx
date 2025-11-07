@@ -4,6 +4,9 @@ import appState from "../../oop/state/AppState";
 import { EVENTS } from "../../oop/state/events";
 import OrderStatus from "../../oop/models/OrderStatus";
 
+const STORE_IMAGE_PLACEHOLDER = "https://via.placeholder.com/160?text=Tienda";
+const PRODUCT_IMAGE_PLACEHOLDER = "https://via.placeholder.com/160?text=Producto";
+
 // Helper wrapper para obtener params en clase
 function withParams(Component){
   return (props)=> <Component {...props} params={useParams()} />;
@@ -69,6 +72,12 @@ class OrderDetail extends React.Component {
     // Obtenemos el rol actual del usuario
     const userRole = appState.user?.role;
 
+    const store = o.store || {};
+    const storeName = store.name || store.nombre || "Tienda";
+    const storeImage = store.image || store.logo || STORE_IMAGE_PLACEHOLDER;
+    const storeDesc = store.desc || store.descripcion || "";
+    const items = Array.isArray(o.items) ? o.items : [];
+
     return (
       <section className="grid lg:grid-cols-3 gap-6">
         {this.state.error && (
@@ -78,15 +87,48 @@ class OrderDetail extends React.Component {
         )}
         <div className="lg:col-span-2">
           <div className="card">
-            <h1 className="text-xl font-semibold">Pedido #{o.id}</h1>
-            <ul className="mt-3 space-y-2">
-              {o.items.map(it => (
-                <li key={it.id} className="flex items-center justify-between">
-                  <span className="text-slate-700">{it.name}</span>
-                  <span className="text-slate-500">S/ {it.price}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+              <img
+                src={storeImage}
+                alt={storeName}
+                className="h-24 w-24 rounded-xl object-cover flex-shrink-0"
+              />
+              <div className="text-center sm:text-left">
+                <h1 className="text-xl font-semibold">Pedido #{o.id}</h1>
+                <p className="text-slate-600 mt-1">{storeName}</p>
+                {storeDesc && <p className="text-sm text-slate-500 mt-1 max-w-md">{storeDesc}</p>}
+                <p className="text-xs text-slate-400 mt-2">{items.length} ítems en este pedido</p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              {items.map((it) => {
+                const image = it.image || PRODUCT_IMAGE_PLACEHOLDER;
+                return (
+                  <div key={it.id} className="flex items-center gap-3 border border-slate-200 rounded-lg p-3">
+                    <img
+                      src={image}
+                      alt={it.name}
+                      className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-700">{it.name}</p>
+                      {it.desc && (
+                        <p className="text-xs text-slate-500 line-clamp-2 mt-1">{it.desc}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">Cantidad: {it.qty}</p>
+                      <p className="font-semibold mt-1">S/ {it.price}</p>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {!items.length && (
+                <div className="text-sm text-slate-500 italic">Este pedido no tiene productos registrados.</div>
+              )}
+            </div>
           </div>
         </div>
         <aside>
