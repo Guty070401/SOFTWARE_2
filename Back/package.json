@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "prepare": "husky install"
   },
   "keywords": [
@@ -34,16 +34,16 @@
     "sequelize": "^6.37.3"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
-    "eslint-config-standard": "^17.1.0",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-n": "^17.10.3",
-    "eslint-plugin-promise": "^7.1.0",
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^17.23.1",
+    "eslint-plugin-promise": "^7.2.1",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
     "nodemon": "^3.1.7"
   },
   "lint-staged": {
-    "*.{js,ts,json}": "eslint --fix"
+    "*.{js,mjs,cjs,json}": "eslint --fix"
   }
 }
