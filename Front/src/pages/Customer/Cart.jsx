@@ -7,33 +7,42 @@ class Cart extends React.Component {
   state = { cart: [] };
 
   componentDidMount() {
-    this.unsubCart = appState.on(EVENTS.CART_CHANGED, (cart) => this.setState({ cart }));
+    this.unsub = appState.on(EVENTS.CART_CHANGED, (cart) =>
+      this.setState({ cart })
+    );
     this.setState({ cart: appState.cart });
   }
 
   componentWillUnmount() {
-    this.unsubCart && this.unsubCart();
+    this.unsub && this.unsub();
   }
 
+  // 🔹 Agrupa productos iguales por id
   getGroupedCart() {
-    const grouped = new Map();
+    const grouped = {};
     for (const item of this.state.cart) {
-      const entry = grouped.get(item.id) || { ...item, qty: 0 };
-      entry.qty += item.qty ?? 1;
-      grouped.set(item.id, entry);
+      if (!grouped[item.id]) {
+        grouped[item.id] = { ...item, qty: 1 };
+      } else {
+        grouped[item.id].qty += 1;
+      }
     }
-    return Array.from(grouped.values());
+    return Object.values(grouped);
   }
 
+  // 🔹 Quita una unidad del producto
   removeOne(id) {
-    const found = this.state.cart.find((i) => i.id === id);
-    if (found) {
-      appState.removeFromCart(found.cartId);
+    const index = this.state.cart.findIndex((i) => i.id === id);
+    if (index !== -1) {
+      const newCart = [...this.state.cart];
+      newCart.splice(index, 1); // elimina solo una unidad
+      appState.emit(EVENTS.CART_CHANGED, newCart);
+      this.setState({ cart: newCart });
     }
   }
 
   total() {
-    return this.state.cart.reduce((acc, i) => acc + Number(i.price ?? 0), 0);
+    return this.state.cart.reduce((acc, i) => acc + i.price, 0);
   }
 
   goCheckout() {
@@ -62,7 +71,7 @@ class Cart extends React.Component {
                         {i.qty} × {i.name}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Precio unitario: S/ {Number(i.price ?? 0).toFixed(2)}
+                        Precio unitario: S/ {i.price.toFixed(2)}
                       </p>
                     </div>
                     <button
@@ -78,6 +87,7 @@ class Cart extends React.Component {
           </div>
         </div>
 
+        {/* 🔹 Total y botones */}
         <aside>
           <div className="card">
             <div className="flex items-center justify-between">
@@ -99,15 +109,6 @@ class Cart extends React.Component {
             >
               Seguir comprando
             </button>
-
-            {this.state.cart.length > 0 && (
-              <button
-                className="btn w-full mt-2"
-                onClick={() => appState.clearCart()}
-              >
-                Vaciar carrito
-              </button>
-            )}
           </div>
         </aside>
       </section>
