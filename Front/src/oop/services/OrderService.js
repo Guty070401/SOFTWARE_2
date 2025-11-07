@@ -1,24 +1,50 @@
-// La orden del usuario
-import ApiClient from "./ApiClient.js";
-import Order from "../models/Order.js";
-import OrderStatus from "../models/OrderStatus.js";
+// Servicio de órdenes conectado con el backend
+import ApiClient from './ApiClient.js';
+
+function normaliseCart(cart = []){
+  const map = new Map();
+  for (const item of cart) {
+    const productId = item.productoId || item.productId || item.id;
+    if (!productId) continue;
+    const key = String(productId);
+    const current = map.get(key) || { productoId: productId, cantidad: 0 };
+    current.cantidad += Number(item.qty ?? 1);
+    map.set(key, current);
+  }
+  return Array.from(map.values());
+}
 
 export default class OrderService {
   constructor(){ this.api = new ApiClient(); }
 
-  async placeOrder(cart, totalOverride = null) {
-  const total = totalOverride ?? cart.reduce((a, i) => a + i.price * (i.qty ?? 1), 0);
-  const order = {
-    id: Date.now(),
-    items: [...cart],
-    total,
-    status: "pendiente",
-  };
-  // Aquí puedes simular guardarlo o retornarlo
-  return order;
-}
+  async listOrders(){
+    const data = await this.api.get('/orders');
+    return Array.isArray(data?.orders) ? data.orders : [];
+  }
 
-  steps(){ return [OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PICKED, OrderStatus.ON_ROUTE, OrderStatus.DELIVERED]; }
-}
+  async getOrder(orderId){
+    if (!orderId) return null;
+    const data = await this.api.get(`/orders/${orderId}`);
+    return data?.order || null;
+  }
 
-//Falta conexión del back
+  async placeOrder(cart, { storeId, address, cardId = null, notes = '' } = {}) {
+    const items = normaliseCart(cart);
+    const payload = {
+      storeId,
+      tarjetaId: cardId || null,
+      direccionEntrega: address || '',
+      comentarios: notes || '',
+      items
+    };
+    const data = await this.api.post('/orders', payload);
+    return data?.order || null;
+  }
+
+  async updateStatus(order, status, notes = ''){
+    const id = typeof order === 'object' ? order.id : order;
+    if (!id) return null;
+    const data = await this.api.patch(`/orders/${id}/status`, { status, notes });
+    return data?.order || null;
+  }
+}
