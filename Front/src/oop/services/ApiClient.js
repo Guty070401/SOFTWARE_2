@@ -4,21 +4,6 @@ function resolveBaseUrl() {
   if (typeof import.meta !== "undefined" && import.meta?.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  if (typeof window !== "undefined") {
-    if (window.__API_URL__) {
-      return window.__API_URL__;
-    }
-    if (window.location) {
-      return "/api";
-    }
-  }
-  const globalProcess = typeof globalThis !== "undefined" ? globalThis.process : undefined;
-  if (globalProcess?.env?.VITE_API_URL) {
-    return globalProcess.env.VITE_API_URL;
-  }
-  if (globalProcess?.env?.API_URL) {
-    return globalProcess.env.API_URL;
-  }
   return "http://localhost:3000/api";
 }
 
