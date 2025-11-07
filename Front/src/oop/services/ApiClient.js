@@ -4,6 +4,21 @@ function resolveBaseUrl() {
   if (typeof import.meta !== "undefined" && import.meta?.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
+  if (typeof window !== "undefined") {
+    if (window.__API_URL__) {
+      return window.__API_URL__;
+    }
+    if (window.location) {
+      return "/api";
+    }
+  }
+  const globalProcess = typeof globalThis !== "undefined" ? globalThis.process : undefined;
+  if (globalProcess?.env?.VITE_API_URL) {
+    return globalProcess.env.VITE_API_URL;
+  }
+  if (globalProcess?.env?.API_URL) {
+    return globalProcess.env.API_URL;
+  }
   return "http://localhost:3000/api";
 }
 
@@ -12,7 +27,7 @@ function getStorage() {
     if (typeof window !== "undefined" && window.localStorage) {
       return window.localStorage;
     }
-  } catch (_error) {
+  } catch {
     // Ignoramos errores de acceso (SSR o modo incógnito)
   }
   return null;
@@ -91,13 +106,13 @@ export default class ApiClient {
     if (contentType.includes("application/json")) {
       try {
         payload = await response.json();
-      } catch (_error) {
+      } catch {
         payload = null;
       }
     } else if (response.status !== 204) {
       try {
         payload = await response.text();
-      } catch (_error) {
+      } catch {
         payload = null;
       }
     }
