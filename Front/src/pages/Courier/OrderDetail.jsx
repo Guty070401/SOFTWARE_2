@@ -10,27 +10,70 @@ function withParams(Component){
 }
 
 class OrderDetail extends React.Component {
-  state = { order: null, notFound: false, modal: false };
+  state = { order: null, notFound: false, modal: false, loading: true, error: null, statusError: null };
 
   componentDidMount(){
+    this._mounted = true;
     this.load();
     this.unsub = appState.on(EVENTS.ORDERS_CHANGED, ()=> this.load());
   }
-  componentWillUnmount(){ this.unsub && this.unsub(); }
+  componentWillUnmount(){
+    this._mounted = false;
+    this.unsub && this.unsub();
+  }
 
-  load() {
-  const { id } = this.props.params;
-  const o = appState.orders.find(x => String(x.id) === String(id));
-  this.setState({ order: o || null, notFound: !o });
-}
+  async load() {
+    const { id } = this.props.params;
+    if (!id) {
+      this._mounted && this.setState({ order: null, notFound: true, loading: false });
+      return;
+    }
+
+    const existing = appState.orders.find((x) => String(x.id) === String(id));
+    if (existing) {
+      this._mounted && this.setState({ order: existing, notFound: false, loading: false });
+      return;
+    }
+
+    this._mounted && this.setState({ loading: true, error: null });
+    try {
+      const order = await appState.fetchOrder(id);
+      if (!this._mounted) return;
+      if (!order) {
+        this.setState({ order: null, notFound: true, loading: false });
+      } else {
+        this.setState({ order, notFound: false, loading: false });
+      }
+    } catch (error) {
+      if (!this._mounted) return;
+      const message = error?.message || "No se pudo cargar el pedido.";
+      this.setState({ error: message, loading: false });
+    }
+  }
 
   async updateStatus(s){
     if (!this.state.order) return;
-    await appState.updateStatus(this.state.order.id, s);
-    this.setState({ modal:false });
+    this.setState({ statusError: null });
+    try {
+      const updated = await appState.updateStatus(this.state.order.id, s);
+      if (updated) {
+        this.setState({ order: updated, modal: false });
+      } else {
+        this.setState({ modal: false });
+      }
+    } catch (error) {
+      const message = error?.message || "No se pudo actualizar el estado.";
+      this.setState({ statusError: message, modal: false });
+    }
   }
 
   render(){
+    if (this.state.loading) {
+      return <div className="card">Cargando pedido...</div>;
+    }
+    if (this.state.error) {
+      return <div className="card border-rose-200 bg-rose-50 text-rose-700">{this.state.error}</div>;
+    }
     if (this.state.notFound) return <div className="card">Pedido no encontrado.</div>;
     const o = this.state.order;
     if (!o) return null;
@@ -59,10 +102,20 @@ class OrderDetail extends React.Component {
               <span className="text-slate-500">Estado</span>
               <span className="pill capitalize">{o.status}</span>
             </div>
+            {o.store?.name && (
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-slate-500">Tienda</span>
+                <span className="font-medium">{o.store.name}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between mt-2">
               <span className="text-slate-500">Total</span>
               <span className="font-semibold">S/ {o.total}</span>
             </div>
+
+            {this.state.statusError && (
+              <p className="text-sm text-rose-600 mt-2">{this.state.statusError}</p>
+            )}
 
             {/* Solo el repartidor puede actualizar estado */}
             {userRole === "courier" && (
