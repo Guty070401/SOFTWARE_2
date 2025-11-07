@@ -20,7 +20,13 @@ class Tarjeta extends Model {
     if (!this.vencimiento) {
       return false;
     }
-    return this.vencimiento < referenceDate;
+    const expiration = this.vencimiento instanceof Date
+      ? this.vencimiento
+      : new Date(this.vencimiento);
+    if (Number.isNaN(expiration.getTime())) {
+      return false;
+    }
+    return expiration < referenceDate;
   }
 
   getMaskedNumber() {
@@ -28,11 +34,20 @@ class Tarjeta extends Model {
   }
 
   toJSON() {
+    let expirationIso = null;
+    if (this.vencimiento) {
+      const expiration = this.vencimiento instanceof Date
+        ? this.vencimiento
+        : new Date(this.vencimiento);
+      if (!Number.isNaN(expiration.getTime())) {
+        expirationIso = expiration.toISOString();
+      }
+    }
     return {
       id: this.id,
       titulo: this.titulo,
       numero: this.getMaskedNumber(),
-      vencimiento: this.vencimiento ? this.vencimiento.toISOString() : null,
+      vencimiento: expirationIso,
       foto: this.foto,
       invalidada: this.invalidada
     };
