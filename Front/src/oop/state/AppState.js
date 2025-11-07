@@ -28,13 +28,6 @@ class AppState {
       });
     }
 
-    this.user = this.auth.getStoredUser();
-    if (this.user) {
-      this.refreshOrders().catch((error) => {
-        console.warn('No se pudieron cargar los pedidos iniciales:', error);
-      });
-    }
-
     AppState.instance = this;
   }
 
