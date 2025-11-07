@@ -12,6 +12,7 @@ class TrackOrder extends React.Component {
   componentDidMount(){
     this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders)=> this.setState({ last: orders[orders.length-1] || null }));
     this.setState({ last: appState.orders[appState.orders.length-1] || null });
+    appState.ensureOrdersLoaded().catch(() => {});
   }
   componentWillUnmount(){ this.unsub && this.unsub(); }
 

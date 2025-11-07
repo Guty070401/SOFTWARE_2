@@ -1,32 +1,26 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { FlatCompat } from 'eslint/use-at-your-own-risk';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: false,
-  allConfig: false
-});
+import js from '@eslint/js';
+import globals from 'globals';
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**']
+    ignores: ['node_modules/**', 'dist/**', 'eslint.config.mjs']
   },
-  ...compat.config({
-    extends: ['standard'],
-    env: {
-      node: true,
-      es2022: true
-    },
-    parserOptions: {
+  {
+    ...js.configs.recommended,
+    languageOptions: {
+      ...js.configs.recommended.languageOptions,
       ecmaVersion: 2022,
-      sourceType: 'script'
+      sourceType: 'script',
+      globals: {
+        ...globals.node,
+        ...globals.es2022
+      }
     },
     rules: {
-      camelcase: 'off'
+      ...js.configs.recommended.rules,
+      camelcase: 'off',
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-console': 'off'
     }
-  })
+  }
 ];

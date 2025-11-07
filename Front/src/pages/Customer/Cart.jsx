@@ -21,33 +21,32 @@ class Cart extends React.Component {
   getGroupedCart() {
     const grouped = {};
     for (const item of this.state.cart) {
-      if (!grouped[item.id]) {
-        grouped[item.id] = { ...item, qty: 1 };
+      const key = `${item.storeId ?? 'unknown'}::${item.id}`;
+      if (!grouped[key]) {
+        grouped[key] = { ...item, qty: 1, cartIds: [item.cartId] };
       } else {
-        grouped[item.id].qty += 1;
+        grouped[key].qty += 1;
+        grouped[key].cartIds.push(item.cartId);
       }
     }
     return Object.values(grouped);
   }
 
   // 🔹 Quita una unidad del producto
-  removeOne(id) {
-    const index = this.state.cart.findIndex((i) => i.id === id);
-    if (index !== -1) {
-      const newCart = [...this.state.cart];
-      newCart.splice(index, 1); // elimina solo una unidad
-      appState.emit(EVENTS.CART_CHANGED, newCart);
-      this.setState({ cart: newCart });
-    }
+  removeOne(group) {
+    const cartId = group.cartIds?.[0];
+    if (!cartId) return;
+    appState.removeFromCart(cartId);
   }
 
   total() {
-    return this.state.cart.reduce((acc, i) => acc + i.price, 0);
+    return this.state.cart.reduce((acc, i) => acc + Number(i.price || 0), 0);
   }
 
   goCheckout() {
     const total = this.total();
-    this.props.navigate("/customer/checkout", { state: { total } });
+    const storeId = this.state.cart.find((i) => i.storeId)?.storeId || null;
+    this.props.navigate("/customer/checkout", { state: { total, storeId } });
   }
 
   render() {
@@ -65,18 +64,21 @@ class Cart extends React.Component {
             ) : (
               <ul className="divide-y">
                 {groupedCart.map((i) => (
-                  <li key={i.id} className="py-3 flex items-center justify-between">
+                  <li key={`${i.storeId ?? 'store'}-${i.id}`} className="py-3 flex items-center justify-between">
                     <div>
                       <p className="font-medium">
                         {i.qty} × {i.name}
                       </p>
+                      {i.storeName && (
+                        <p className="text-xs text-slate-400">{i.storeName}</p>
+                      )}
                       <p className="text-xs text-slate-500">
-                        Precio unitario: S/ {i.price.toFixed(2)}
+                        Precio unitario: S/ {Number(i.price).toFixed(2)}
                       </p>
                     </div>
                     <button
                       className="text-sm text-rose-600 hover:underline"
-                      onClick={() => this.removeOne(i.id)}
+                      onClick={() => this.removeOne(i)}
                     >
                       Quitar
                     </button>
