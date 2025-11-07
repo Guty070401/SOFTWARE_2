@@ -81,6 +81,7 @@ Aplicación full-stack para la gestión de pedidos de comida, compuesta por un b
    VITE_API_URL=https://tu-backend/api
 
    # (solo desarrollo) especifica otro origen para el proxy de Vite
+   # (si no lo defines y `VITE_API_URL` es absoluta, se usará su mismo origen)
    VITE_API_PROXY_TARGET=http://tu-backend:3000
    ```
 

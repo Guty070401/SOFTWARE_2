@@ -5,9 +5,26 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import process from 'node:process'
 
+function resolveProxyTarget(env) {
+  if (env.VITE_API_PROXY_TARGET) {
+    return env.VITE_API_PROXY_TARGET
+  }
+
+  const apiUrl = env.VITE_API_URL
+  if (apiUrl && /^https?:\/\//i.test(apiUrl)) {
+    try {
+      return new URL(apiUrl).origin
+    } catch {
+      // ignoramos: caeremos al valor por defecto
+    }
+  }
+
+  return 'http://localhost:3000'
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const proxyTarget = env.VITE_API_PROXY_TARGET || env.VITE_API_URL || 'http://localhost:3000'
+  const proxyTarget = resolveProxyTarget(env)
 
   return {
     plugins: [react(), tailwindcss()],
