@@ -4,17 +4,39 @@ import { EVENTS } from "../../oop/state/events";
 import withNavigate from "../../oop/router/withNavigate";
 
 class CustomerOrders extends React.Component {
-  state = { orders: [] };
+  state = { orders: [], loading: false, error: null };
 
   componentDidMount() {
+    this._mounted = true;
     this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders) =>
       this.setState({ orders })
     );
     this.setState({ orders: appState.orders });
+    this.loadOrders();
   }
 
   componentWillUnmount() {
     this.unsub && this.unsub();
+    this._mounted = false;
+  }
+
+  async loadOrders(){
+    if (!this._mounted) return;
+    this.setState({ loading: true, error: null });
+    try {
+      const orders = await appState.ensureOrdersLoaded();
+      if (orders && this._mounted) {
+        this.setState({ orders });
+      }
+    } catch (error) {
+      if (this._mounted) {
+        this.setState({ error: error?.message || 'No se pudieron cargar los pedidos.' });
+      }
+    } finally {
+      if (this._mounted) {
+        this.setState({ loading: false });
+      }
+    }
   }
 
   openOrder(id) {
@@ -31,6 +53,16 @@ class CustomerOrders extends React.Component {
     return (
       <section>
         <h1 className="text-2xl font-semibold mb-4">Pedidos Realizados</h1>
+
+        {this.state.loading && (
+          <p className="text-sm text-slate-500 mb-3">Cargando pedidos...</p>
+        )}
+
+        {this.state.error && (
+          <div className="p-3 mb-3 rounded bg-rose-100 text-rose-700 text-sm">
+            {this.state.error}
+          </div>
+        )}
 
         {!orders.length ? (
           <div className="card text-center">

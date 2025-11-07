@@ -4,13 +4,16 @@ import appState from "../oop/state/AppState.js";
 import { EVENTS } from "../oop/state/events.js";
 
 export default class Login extends React.Component {
-  state = { email: "", pass: "", logged: false };
+  state = { email: "", pass: "", logged: false, loading: false, error: null };
 
   componentDidMount() {
     // Escucha cambios en la autenticación
     this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => {
-      if (u) this.setState({ logged: true });
+      this.setState({ logged: !!u, loading: false });
     });
+    if (appState.user) {
+      this.setState({ logged: true });
+    }
   }
 
   componentWillUnmount() {
@@ -19,8 +22,14 @@ export default class Login extends React.Component {
 
   async onSubmit(e) {
     e.preventDefault();
-    // Inicia sesión con el estado actual
-    await appState.login(this.state.email, this.state.pass);
+    if (this.state.loading) return;
+    this.setState({ loading: true, error: null });
+    try {
+      await appState.login(this.state.email, this.state.pass);
+    } catch (error) {
+      const message = error?.message || 'No se pudo iniciar sesión.';
+      this.setState({ error: message, loading: false });
+    }
   }
 
   render() {
@@ -31,6 +40,11 @@ export default class Login extends React.Component {
       <section className="grid md:grid-cols-2 gap-6 items-center">
         <div className="card">
           <h1 className="text-2xl font-semibold mb-2">Ingresar</h1>
+          {this.state.error && (
+            <div className="p-3 rounded bg-rose-100 text-rose-700 text-sm">
+              {this.state.error}
+            </div>
+          )}
           <form onSubmit={(e) => this.onSubmit(e)} className="space-y-4">
             <div>
               <label className="text-sm font-medium">Correo</label>
@@ -54,7 +68,9 @@ export default class Login extends React.Component {
                 placeholder="••••••••"
               />
             </div>
-            <button className="btn btn-primary w-full">Entrar</button>
+            <button className="btn btn-primary w-full" disabled={this.state.loading}>
+              {this.state.loading ? 'Ingresando...' : 'Entrar'}
+            </button>
           </form>
           <p className="text-sm text-slate-500 mt-4">
             ¿No tienes cuenta?{" "}
