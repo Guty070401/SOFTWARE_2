@@ -1,16 +1,21 @@
 const { Tienda, Producto } = require('../models');
 
-function mapProduct(product) {
+function mapProduct(product, store) {
   if (!product) {
     return null;
   }
-  return {
+  const dto = {
     id: product.id,
     name: product.nombre,
     desc: product.descripcion,
     image: product.foto,
     price: Number(product.precio)
   };
+  if (store) {
+    dto.storeId = store.id;
+    dto.storeName = store.nombreOrigen || store.name || '';
+  }
+  return dto;
 }
 
 function mapStore(store, { includeItems = true } = {}) {
@@ -29,7 +34,7 @@ function mapStore(store, { includeItems = true } = {}) {
 
   if (includeItems) {
     const items = (store.productos || store.Productos || [])
-      .map(mapProduct)
+      .map((product) => mapProduct(product, store))
       .filter(Boolean);
     dto.items = items;
   }
