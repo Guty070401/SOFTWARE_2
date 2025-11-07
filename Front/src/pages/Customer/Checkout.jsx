@@ -8,7 +8,7 @@ function withLocation(Component){
 }
 
 class Checkout extends React.Component {
-  state = { total: 0, paying: false, address: "", notes: "", error: null };
+  state = { total: 0, paying: false };
 
   componentDidMount(){
     const passed = this.props.location?.state?.total ?? 0;
@@ -18,15 +18,10 @@ class Checkout extends React.Component {
 
   async pay(e){
     e.preventDefault();
-    this.setState({ paying: true, error: null });
-    try {
-      await appState.placeOrder({ address: this.state.address, notes: this.state.notes });
-      this.setState({ paying: false });
-      this.props.navigate("/customer/track", { replace: true });
-    } catch (error) {
-      const message = error?.message || "No se pudo procesar el pedido.";
-      this.setState({ paying: false, error: message });
-    }
+    this.setState({ paying: true });
+    await appState.placeOrder();
+    this.setState({ paying: false });
+    this.props.navigate("/customer/track", { replace: true });
   }
 
   render(){
@@ -40,30 +35,14 @@ class Checkout extends React.Component {
               <input className="input" placeholder="Nombre y Apellidos" required/>
               <input className="input" placeholder="Teléfono" />
             </div>
-            <input
-              className="input"
-              placeholder="Dirección exacta de entrega"
-              value={this.state.address}
-              onChange={(e)=>this.setState({ address: e.target.value })}
-              required
-            />
+            <input className="input" placeholder="Dirección exacta de entrega" required/>
             <div className="grid md:grid-cols-2 gap-4">
               <input className="input" placeholder="Nro. tarjeta" required/>
               <input className="input" placeholder="MM/AA - CVV" required/>
             </div>
-            <textarea
-              className="input"
-              placeholder="Notas para el pedido (opcional)"
-              rows={3}
-              value={this.state.notes}
-              onChange={(e)=>this.setState({ notes: e.target.value })}
-            />
-            {this.state.error && (
-              <p className="text-sm text-rose-600">{this.state.error}</p>
-            )}
             <div className="flex items-center justify-between">
               <span className="text-slate-600">Total a pagar</span>
-              <span className="text-xl font-semibold">S/ {Number(this.state.total).toFixed(2)}</span>
+              <span className="text-xl font-semibold">S/ {this.state.total}</span>
             </div>
             <button className="btn btn-primary" disabled={this.state.paying}>
               {this.state.paying ? "Procesando..." : "Pagar y crear pedido"}

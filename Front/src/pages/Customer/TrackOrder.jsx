@@ -5,20 +5,13 @@ import OrderStatus from "../../oop/models/OrderStatus";
 import withNavigate from "../../oop/router/withNavigate";
 
 class TrackOrder extends React.Component {
-  state = { last: null, loading: true, error: null };
+  state = { last: null };
 
   static STEPS = [OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PICKED, OrderStatus.ON_ROUTE, OrderStatus.DELIVERED];
 
   componentDidMount(){
-    this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders)=>
-      this.setState({ last: orders[orders.length-1] || null, loading: false })
-    );
-    const initial = appState.orders[appState.orders.length-1] || null;
-    this.setState({ last: initial, loading: false });
-    appState.refreshOrders({ force: true }).catch((error) => {
-      const message = error?.message || "No se pudo obtener el estado de tus pedidos.";
-      this.setState({ error: message, loading: false });
-    });
+    this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders)=> this.setState({ last: orders[orders.length-1] || null }));
+    this.setState({ last: appState.orders[appState.orders.length-1] || null });
   }
   componentWillUnmount(){ this.unsub && this.unsub(); }
 
@@ -35,17 +28,12 @@ class TrackOrder extends React.Component {
   }
 
   render(){
-    const { last, loading, error } = this.state;
+    const { last } = this.state;
     return (
       <section className="max-w-2xl mx-auto">
         <div className="card">
           <h1 className="text-xl font-semibold mb-2">Seguimiento de pedido</h1>
-          {error && (
-            <p className="text-sm text-rose-600 mb-3">{error}</p>
-          )}
-          {loading ? (
-            <p className="text-slate-500">Cargando el último pedido...</p>
-          ) : !last ? (
+          {!last ? (
             <div>
               <p className="text-slate-500 mb-3">No hay pedidos.</p>
               <button className="btn btn-primary" onClick={()=>this.props.navigate("/customer")}>Ir al menú</button>

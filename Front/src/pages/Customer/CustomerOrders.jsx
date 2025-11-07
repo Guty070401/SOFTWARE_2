@@ -4,17 +4,13 @@ import { EVENTS } from "../../oop/state/events";
 import withNavigate from "../../oop/router/withNavigate";
 
 class CustomerOrders extends React.Component {
-  state = { orders: [], loading: true, error: null };
+  state = { orders: [] };
 
   componentDidMount() {
     this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders) =>
-      this.setState({ orders, loading: false })
+      this.setState({ orders })
     );
-    this.setState({ orders: appState.orders, loading: false });
-    appState.refreshOrders({ force: true }).catch((error) => {
-      const message = error?.message || "No se pudieron obtener los pedidos.";
-      this.setState({ error: message, loading: false });
-    });
+    this.setState({ orders: appState.orders });
   }
 
   componentWillUnmount() {
@@ -30,19 +26,13 @@ class CustomerOrders extends React.Component {
   }
 
   render() {
-    const { orders, loading, error } = this.state;
+    const { orders } = this.state;
 
     return (
       <section>
         <h1 className="text-2xl font-semibold mb-4">Pedidos Realizados</h1>
 
-        {error && (
-          <div className="card border-rose-200 bg-rose-50 text-rose-700 mb-4">{error}</div>
-        )}
-
-        {loading ? (
-          <div className="card">Cargando pedidos...</div>
-        ) : !orders.length ? (
+        {!orders.length ? (
           <div className="card text-center">
             <p className="text-slate-500 mb-4">
               Aún no has realizado ningún pedido.

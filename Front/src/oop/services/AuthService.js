@@ -1,57 +1,22 @@
-// Servicio del registro y autenticación de usuarios contra el backend real
+// Servicio del regisstro y logeo de usuarios
 import ApiClient from "./ApiClient.js";
 import User from "../models/User.js";
 
 export default class AuthService {
-  constructor() {
-    this.api = new ApiClient();
+  constructor(){ this.api = new ApiClient(); }
+
+  async login(email, _pass){
+    // Simula login
+    const name = email.split("@")[0] || "Usuario";
+    const user = new User(crypto.randomUUID?.() || Date.now().toString(), name, null, email);
+    await this.api.post("/login", { email });
+    return user;
   }
 
-  get token() {
-    return this.api.token;
-  }
-
-  async login(email, password) {
-    const response = await this.api.post("/auth/login", {
-      email,
-      correo: email,
-      password
-    });
-
-    if (response?.token) {
-      this.api.setToken(response.token);
-    }
-
-    return User.fromApi(response?.user) ?? null;
-  }
-
-  async register({ name, email, password, phone }) {
-    const response = await this.api.post("/auth/register", {
-      nombre: name,
-      correo: email,
-      password,
-      celular: phone
-    });
-
-    if (response?.token) {
-      this.api.setToken(response.token);
-    }
-
-    return User.fromApi(response?.user) ?? null;
-  }
-
-  async getProfile() {
-    const response = await this.api.get("/users/me");
-    return User.fromApi(response?.user) ?? null;
-  }
-
-  async updateProfile(patch) {
-    const response = await this.api.patch("/users/me", patch);
-    return User.fromApi(response?.user) ?? null;
-  }
-
-  logout() {
-    this.api.clearToken();
+  async register({ name, email }){
+    const user = new User(crypto.randomUUID?.() || Date.now().toString(), name, null, email);
+    await this.api.post("/register", { name, email });
+    return user;
   }
 }
 

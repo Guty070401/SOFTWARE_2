@@ -7,19 +7,12 @@ export default class App extends React.Component {
   state = { user: null };
 
   componentDidMount() {
-    this._mounted = true;
     // Escuchar cambios de sesión (login / logout)
     this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => this.setState({ user: u }));
     this.setState({ user: appState.user });
-    appState.restore()?.then((user) => {
-      if (user && this._mounted) {
-        this.setState({ user });
-      }
-    }).catch(() => {});
   }
 
   componentWillUnmount() {
-    this._mounted = false;
     this.unsub && this.unsub();
   }
 

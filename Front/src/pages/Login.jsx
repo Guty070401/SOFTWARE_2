@@ -4,7 +4,7 @@ import appState from "../oop/state/AppState.js";
 import { EVENTS } from "../oop/state/events.js";
 
 export default class Login extends React.Component {
-  state = { email: "", pass: "", logged: false, loading: false, error: null };
+  state = { email: "", pass: "", logged: false };
 
   componentDidMount() {
     // Escucha cambios en la autenticación
@@ -19,15 +19,8 @@ export default class Login extends React.Component {
 
   async onSubmit(e) {
     e.preventDefault();
-    this.setState({ loading: true, error: null });
-    try {
-      await appState.login(this.state.email, this.state.pass);
-    } catch (error) {
-      const message = error?.message || "No se pudo iniciar sesión. Verifica tus datos.";
-      this.setState({ error: message, loading: false });
-      return;
-    }
-    this.setState({ loading: false });
+    // Inicia sesión con el estado actual
+    await appState.login(this.state.email, this.state.pass);
   }
 
   render() {
@@ -61,12 +54,7 @@ export default class Login extends React.Component {
                 placeholder="••••••••"
               />
             </div>
-            {this.state.error && (
-              <p className="text-sm text-rose-600">{this.state.error}</p>
-            )}
-            <button className="btn btn-primary w-full" disabled={this.state.loading}>
-              {this.state.loading ? "Ingresando..." : "Entrar"}
-            </button>
+            <button className="btn btn-primary w-full">Entrar</button>
           </form>
           <p className="text-sm text-slate-500 mt-4">
             ¿No tienes cuenta?{" "}

@@ -32,9 +32,12 @@ class Cart extends React.Component {
 
   // 🔹 Quita una unidad del producto
   removeOne(id) {
-    const item = this.state.cart.find((i) => i.id === id);
-    if (item) {
-      appState.removeFromCart(item.cartId);
+    const index = this.state.cart.findIndex((i) => i.id === id);
+    if (index !== -1) {
+      const newCart = [...this.state.cart];
+      newCart.splice(index, 1); // elimina solo una unidad
+      appState.emit(EVENTS.CART_CHANGED, newCart);
+      this.setState({ cart: newCart });
     }
   }
 
