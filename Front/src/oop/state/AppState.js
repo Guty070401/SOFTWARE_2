@@ -1,6 +1,7 @@
 import { EVENTS } from "./events.js";
 import AuthService from "../services/AuthService.js";
 import OrderService from "../services/OrderService.js";
+import UserService from "../services/UserService.js";
 import Item from "../models/Item.js";
 
 class AppState {
@@ -11,11 +12,34 @@ class AppState {
     this.user = null;
     this.cart = /** @type {Item[]} */([]);
     this.orders = [];
+    this.cards = [];
     // Servicios
     this.auth = new AuthService();
     this.orderSrv = new OrderService();
+    this.userSrv = new UserService();
+
+    this.user = this.auth.getStoredUser();
+    if (this.user) {
+      this.refreshOrders().catch((error) => {
+        console.warn('No se pudieron cargar los pedidos iniciales:', error);
+      });
+      this.refreshCards().catch((error) => {
+        console.warn('No se pudieron cargar las tarjetas iniciales:', error);
+      });
+    }
 
     AppState.instance = this;
+  }
+
+  sortOrders(orders = []){
+    return orders
+      .filter(Boolean)
+      .slice()
+      .sort((a, b) => {
+        const dateA = new Date(a?.createdAt || a?.fecha || 0).getTime() || 0;
+        const dateB = new Date(b?.createdAt || b?.fecha || 0).getTime() || 0;
+        return dateA - dateB;
+      });
   }
 
   // --- Pub/Sub simple ---
@@ -33,23 +57,56 @@ class AppState {
   async login(email, pass){
     this.user = await this.auth.login(email, pass);
     this.emit(EVENTS.AUTH_CHANGED, this.user);
+    await Promise.all([
+      this.refreshOrders().catch(() => {}),
+      this.refreshCards().catch(() => {})
+    ]);
     return this.user;
   }
   async register(payload){
     this.user = await this.auth.register(payload);
     this.emit(EVENTS.AUTH_CHANGED, this.user);
+    await Promise.all([
+      this.refreshOrders().catch(() => {}),
+      this.refreshCards().catch(() => {})
+    ]);
     return this.user;
   }
-  setRole(role){
-    if (this.user) { this.user.setRole(role); this.emit(EVENTS.AUTH_CHANGED, this.user); }
+  async setRole(role){
+    if (!this.user) return null;
+    this.user = await this.auth.updateRole(role);
+    this.emit(EVENTS.AUTH_CHANGED, this.user);
+    await Promise.all([
+      this.refreshOrders(true).catch(() => {}),
+      this.refreshCards(true).catch(() => {})
+    ]);
+    return this.user;
   }
-  logout(){ this.user = null; this.emit(EVENTS.AUTH_CHANGED, null); }
+  logout(){
+    this.auth.logout();
+    this.user = null;
+    this.cart = [];
+    this.orders = [];
+    this.cards = [];
+    this.emit(EVENTS.AUTH_CHANGED, null);
+    this.emit(EVENTS.CART_CHANGED, this.cart);
+    this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+    this.emit(EVENTS.CARDS_CHANGED, this.cards);
+  }
 
   // --- Cart ---
   addToCart(item) {
     const cartItem = { ...item, cartId: Date.now() + Math.random() };
+    cartItem.price = Number(cartItem.price || 0);
+    const existingStore = this.cart.find((i) => i.storeId)?.storeId;
+    if (existingStore && cartItem.storeId && existingStore !== cartItem.storeId) {
+      const error = new Error('Solo puedes agregar productos de una tienda por pedido. Vacía el carrito o finaliza la compra actual antes de cambiar de tienda.');
+      error.code = 'CART_STORE_MISMATCH';
+      throw error;
+    }
     this.cart.push(cartItem);
     this.emit(EVENTS.CART_CHANGED, this.cart);
+    return cartItem;
   }
   removeFromCart(cartId) {
     this.cart = this.cart.filter(i => i.cartId !== cartId);
@@ -61,19 +118,123 @@ class AppState {
   }
 
   // --- Orders ---
-  async placeOrder(){
-    const order = await this.orderSrv.placeOrder(this.cart);
-    this.orders = [...this.orders, order];
-    this.clearCart();
+  async refreshOrders(force = false){
+    if (!this.user) {
+      this.orders = [];
+      this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+      return [];
+    }
+    if (!force && typeof navigator !== 'undefined' && !navigator.onLine && this.orders.length) {
+      return this.orders;
+    }
+    const orders = await this.orderSrv.listOrders();
+    this.orders = this.sortOrders(Array.isArray(orders) ? orders : []);
     this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+    return orders;
+  }
+
+  async ensureOrdersLoaded(force = false){
+    if (!this.user) return [];
+    if (!force && this.orders.length) return this.orders;
+    try {
+      return await this.refreshOrders(force);
+    } catch (error) {
+      console.error('No se pudieron obtener los pedidos:', error);
+      throw error;
+    }
+  }
+
+  async refreshCards(force = false){
+    if (!this.user) {
+      this.cards = [];
+      this.emit(EVENTS.CARDS_CHANGED, this.cards);
+      return [];
+    }
+    if (!force && this.cards.length) {
+      return this.cards;
+    }
+    const cards = await this.userSrv.listCards();
+    this.cards = Array.isArray(cards) ? cards : [];
+    this.emit(EVENTS.CARDS_CHANGED, this.cards);
+    return this.cards;
+  }
+
+  async addCard(cardData){
+    if (!this.user) {
+      throw new Error('Debes iniciar sesión para registrar una tarjeta.');
+    }
+    const card = await this.userSrv.addCard(cardData);
+    if (card) {
+      this.cards = [...this.cards, card];
+      this.emit(EVENTS.CARDS_CHANGED, this.cards);
+    }
+    return card;
+  }
+
+  async removeCard(cardId){
+    if (!this.user) {
+      throw new Error('Debes iniciar sesión para eliminar una tarjeta.');
+    }
+    await this.userSrv.removeCard(cardId);
+    this.cards = this.cards.filter((card) => String(card.id) !== String(cardId));
+    this.emit(EVENTS.CARDS_CHANGED, this.cards);
+  }
+
+  async placeOrder(details = {}){
+    if (!this.user) {
+      throw new Error('Debes iniciar sesión para crear un pedido.');
+    }
+    if (!this.cart.length) {
+      throw new Error('El carrito está vacío.');
+    }
+    const storeIds = new Set(
+      this.cart
+        .map((item) => item.storeId)
+        .filter((id) => id !== null && id !== undefined)
+        .map((id) => String(id))
+    );
+    const resolvedStoreId = details.storeId || [...storeIds][0] || null;
+    if (!resolvedStoreId) {
+      throw new Error('No se pudo determinar la tienda del pedido.');
+    }
+    if (storeIds.size > 1 && !details.storeId) {
+      throw new Error('El pedido solo puede incluir productos de una tienda.');
+    }
+    const order = await this.orderSrv.placeOrder(this.cart, {
+      storeId: resolvedStoreId,
+      address: details.address,
+      cardId: details.cardId,
+      notes: details.notes
+    });
+    if (order) {
+      const filtered = this.orders.filter((o) => String(o.id) !== String(order.id));
+      this.orders = this.sortOrders([...filtered, order]);
+      this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+      this.clearCart();
+    }
     return order;
   }
   async updateStatus(orderId, status){
-    const found = this.orders.find(o => o.id === orderId);
-    if (!found) return null;
-    await this.orderSrv.updateStatus(found, status);
+    const updated = await this.orderSrv.updateStatus(orderId, status);
+    if (!updated) return null;
+    const idx = this.orders.findIndex((o) => String(o.id) === String(updated.id));
+    const next = idx === -1
+      ? [...this.orders, updated]
+      : this.orders.map((o, index) => (index === idx ? updated : o));
+    this.orders = this.sortOrders(next);
     this.emit(EVENTS.ORDERS_CHANGED, this.orders);
-    return found;
+    return updated;
+  }
+
+  async getOrder(orderId){
+    const existing = this.orders.find((o) => String(o.id) === String(orderId));
+    if (existing) return existing;
+    const order = await this.orderSrv.getOrder(orderId);
+    if (order) {
+      this.orders = this.sortOrders([order, ...this.orders]);
+      this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+    }
+    return order;
   }
 }
 

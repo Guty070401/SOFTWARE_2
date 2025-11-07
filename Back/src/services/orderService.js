@@ -1,21 +1,42 @@
+const { Op } = require('sequelize');
 const {
-  ordenes,
-  ordenUsuarios,
-  ordenProductos,
-  historialEstados,
-  usuarios,
-  tarjetas
-} = require('../data/database');
-const Orden = require('../models/Orden');
-const OrdenUsuario = require('../models/OrdenUsuario');
-const OrdenProducto = require('../models/OrdenProducto');
-const HistorialEstado = require('../models/HistorialEstado');
+  sequelize,
+  Orden,
+  OrdenUsuario,
+  OrdenProducto,
+  HistorialEstado,
+  Tarjeta,
+  Usuario,
+  Producto,
+  Tienda
+} = require('../models');
 const { ORDER_STATUS, ORDER_STATUS_FLOW, isValidOrderStatus } = require('../constants/orderStatus');
 const authService = require('./authService');
 const storeService = require('./storeService');
+const { generateId } = require('../utils/id');
 
-function requireUser(userId) {
-  const user = authService.getUserById(userId);
+const orderIncludes = [
+  {
+    model: OrdenProducto,
+    as: 'items',
+    include: [{ model: Producto, as: 'producto' }]
+  },
+  {
+    model: HistorialEstado,
+    as: 'historial'
+  },
+  {
+    model: Tienda,
+    as: 'tienda'
+  },
+  {
+    model: Tarjeta,
+    as: 'tarjeta'
+  }
+];
+
+async function requireUser(userId) {
+  const user = await authService.getUserById(userId);
   if (!user) {
     const error = new Error('Usuario no encontrado');
     error.status = 404;
@@ -24,8 +45,11 @@ function requireUser(userId) {
   return user;
 }
 
-function requireOrder(orderId) {
-  const order = ordenes.get(orderId);
+async function loadOrder(orderId, transaction) {
+  const order = await Orden.findByPk(orderId, {
+    include: orderIncludes,
+    transaction
+  });
   if (!order) {
     const error = new Error('Orden no encontrada');
     error.status = 404;
@@ -35,81 +59,99 @@ function requireOrder(orderId) {
 }
 
 function orderToDTO(order) {
-  const store = storeService.getStore(order.tiendaId);
-  const items = order.items.map((orderProduct) => {
-    const product = storeService.getProduct(orderProduct.productoId);
+  const store = storeService.mapStore(order.tienda, { includeItems: false });
+  const items = (order.items || []).map((orderProduct) => {
+    const product = orderProduct.producto;
     return {
       id: product ? product.id : orderProduct.productoId,
       name: product ? product.nombre : 'Producto',
-      price: orderProduct.precioUnitario,
-      quantity: orderProduct.cantidad,
-      subtotal: orderProduct.subtotal(),
-      image: product ? product.foto : null
+      desc: product ? product.descripcion : '',
+      image: product ? product.foto : null,
+      price: Number(orderProduct.precioUnitario),
+      qty: orderProduct.cantidad,
+      subtotal: Number(orderProduct.subtotal().toFixed(2))
     };
   });
 
-  const history = historialEstados
-    .filter((hist) => hist.ordenId === order.id)
-    .map((hist) => hist.toJSON());
+  const history = (order.historial || [])
+    .sort((a, b) => new Date(a.hora) - new Date(b.hora))
+    .map((hist) => ({
+      id: hist.id,
+      status: hist.estado,
+      notes: hist.comentarios,
+      timestamp: hist.hora instanceof Date ? hist.hora.toISOString() : new Date(hist.hora).toISOString()
+    }));
 
   return {
     id: order.id,
     tracking: order.tracking,
     status: order.estado,
-    total: order.total,
-    store: store ? store.toJSON() : null,
+    total: Number(order.total),
+    store,
     items,
     history,
-    direccionEntrega: order.direccionEntrega,
-    comentarios: order.comentarios,
-    createdAt: order.createdAt.toISOString()
+    address: order.direccionEntrega,
+    notes: order.comentarios,
+    createdAt: order.createdAt ? order.createdAt.toISOString() : new Date().toISOString()
   };
 }
 
-function userHasAccessToOrder(user, orderId) {
+async function userHasAccessToOrder(user, orderId, transaction) {
   if (user.rol === 'admin') {
     return true;
   }
-  return ordenUsuarios.some((link) => link.usuarioId === user.id && link.ordenId === orderId);
+
+  const baseWhere = { ordenId: orderId, usuarioId: user.id };
+
+  const where = user.rol === 'courier'
+    ? { ...baseWhere, [Op.or]: [{ esRepartidor: true }, { esPropietario: true }] }
+    : { ...baseWhere, esPropietario: true };
+
+  const link = await OrdenUsuario.findOne({ where, transaction });
+  return Boolean(link);
 }
 
-function listOrdersForUser(user) {
-  let orderIds;
-  if (user.rol === 'courier') {
-    orderIds = ordenUsuarios
-      .filter((link) => link.usuarioId === user.id && link.esRepartidor)
-      .map((link) => link.ordenId);
-  } else if (user.rol === 'customer') {
-    orderIds = ordenUsuarios
-      .filter((link) => link.usuarioId === user.id && link.esPropietario)
-      .map((link) => link.ordenId);
+async function listOrdersForUser(user) {
+  let orders;
+  if (user.rol === 'admin') {
+    orders = await Orden.findAll({ include: orderIncludes, order: [['created_at', 'DESC']] });
   } else {
-    orderIds = Array.from(ordenes.keys());
-  }
+    const where = user.rol === 'courier'
+      ? { usuarioId: user.id, [Op.or]: [{ esRepartidor: true }, { esPropietario: true }] }
+      : { usuarioId: user.id, esPropietario: true };
 
-  return orderIds
-    .map((orderId) => ordenes.get(orderId))
-    .filter(Boolean)
-    .map(orderToDTO);
+    const links = await OrdenUsuario.findAll({ where });
+    const orderIds = links.map((link) => link.ordenId);
+    if (!orderIds.length) {
+      return [];
+    }
+    orders = await Orden.findAll({
+      where: { id: orderIds },
+      include: orderIncludes,
+      order: [['created_at', 'DESC']]
+    });
+  }
+  return orders.map(orderToDTO);
 }
 
-function ensureCardBelongsToUser(user, cardId) {
+async function ensureCardBelongsToUser(user, cardId, transaction) {
   if (!cardId) {
     return null;
   }
-  if (!user.tarjetas.has(cardId)) {
+  const card = await Tarjeta.findOne({ where: { id: cardId, usuarioId: user.id }, transaction });
+  if (!card) {
     const error = new Error('La tarjeta seleccionada no pertenece al usuario');
     error.status = 400;
     throw error;
   }
-  return tarjetas.get(cardId) || null;
+  return card;
 }
 
-function findCourier() {
-  return Array.from(usuarios.values()).find((user) => user.rol === 'courier') || null;
+async function findCourier(transaction) {
+  return Usuario.findOne({ where: { rol: 'courier' }, transaction, order: [['created_at', 'ASC']] });
 }
 
-function createOrder({
+async function createOrder({
   customerId,
   storeId,
   items,
@@ -117,81 +159,93 @@ function createOrder({
   direccionEntrega,
   comentarios
 }) {
-  const user = requireUser(customerId);
-  const store = storeService.getStore(storeId);
+  if (!Array.isArray(items) || !items.length) {
+    const error = new Error('Debe incluir productos en la orden');
+    error.status = 400;
+    throw error;
+  }
+
+  const user = await requireUser(customerId);
+  const store = await Tienda.findByPk(storeId);
   if (!store) {
     const error = new Error('Tienda no encontrada');
     error.status = 404;
     throw error;
   }
-  if (!Array.isArray(items) || items.length === 0) {
-    const error = new Error('Debe indicar al menos un producto');
-    error.status = 400;
+
+  const transaction = await sequelize.transaction();
+  try {
+    const card = await ensureCardBelongsToUser(user, tarjetaId, transaction);
+
+    const order = await Orden.create({
+      tracking: generateId('trk_'),
+      tiendaId: store.id,
+      tarjetaId: card ? card.id : null,
+      direccionEntrega: direccionEntrega || '',
+      comentarios: comentarios || '',
+      total: 0
+    }, { transaction });
+
+    let total = 0;
+    for (const item of items) {
+      const product = await Producto.findOne({
+        where: { id: item.productoId, tiendaId: store.id },
+        transaction
+      });
+      if (!product) {
+        const error = new Error(`Producto no encontrado: ${item.productoId}`);
+        error.status = 404;
+        throw error;
+      }
+      const cantidad = Number(item.cantidad) || 1;
+      const precioUnitario = Number(product.precio);
+      await OrdenProducto.create({
+        ordenId: order.id,
+        productoId: product.id,
+        cantidad,
+        precioUnitario
+      }, { transaction });
+      total += cantidad * precioUnitario;
+    }
+
+    order.total = Number(total.toFixed(2));
+    await order.save({ transaction });
+
+    await HistorialEstado.create({
+      ordenId: order.id,
+      estado: ORDER_STATUS.PENDING,
+      comentarios: 'Pedido creado'
+    }, { transaction });
+
+    await OrdenUsuario.create({
+      ordenId: order.id,
+      usuarioId: user.id,
+      esPropietario: true
+    }, { transaction });
+
+    const courier = await findCourier(transaction);
+    if (courier) {
+      await OrdenUsuario.create({
+        ordenId: order.id,
+        usuarioId: courier.id,
+        esRepartidor: true
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    const createdOrder = await loadOrder(order.id);
+    return orderToDTO(createdOrder);
+  } catch (error) {
+    await transaction.rollback();
     throw error;
   }
-
-  ensureCardBelongsToUser(user, tarjetaId);
-
-  const order = new Orden({
-    tiendaId: store.id,
-    tarjetaId: tarjetaId || null,
-    direccionEntrega: direccionEntrega || '',
-    comentarios: comentarios || ''
-  });
-
-  items.forEach((item) => {
-    const product = storeService.getProduct(item.productoId);
-    if (!product) {
-      const error = new Error(`Producto no encontrado: ${item.productoId}`);
-      error.status = 404;
-      throw error;
-    }
-    const cantidad = Number(item.cantidad) || 1;
-    const orderProduct = new OrdenProducto({
-      ordenId: order.id,
-      productoId: product.id,
-      cantidad,
-      precioUnitario: product.precio
-    });
-    order.addItem(orderProduct);
-    ordenProductos.push(orderProduct);
-  });
-
-  const initialHistory = new HistorialEstado({
-    ordenId: order.id,
-    estado: ORDER_STATUS.PENDING,
-    comentarios: 'Pedido creado'
-  });
-  order.addHistorial(initialHistory);
-  historialEstados.push(initialHistory);
-
-  ordenes.set(order.id, order);
-
-  const customerLink = new OrdenUsuario({
-    ordenId: order.id,
-    usuarioId: user.id,
-    esPropietario: true
-  });
-  ordenUsuarios.push(customerLink);
-  user.agregarOrden(order.id);
-
-  const courier = findCourier();
-  if (courier) {
-    const courierLink = new OrdenUsuario({
-      ordenId: order.id,
-      usuarioId: courier.id,
-      esRepartidor: true
-    });
-    ordenUsuarios.push(courierLink);
-    courier.agregarOrden(order.id);
-  }
-
-  return orderToDTO(order);
 }
 
-function getOrderByIdForUser(orderId, user) {
-  const order = requireOrder(orderId);
-  if (!userHasAccessToOrder(user, orderId)) {
+async function getOrderByIdForUser(orderId, user) {
+  const order = await loadOrder(orderId);
+  const hasAccess = await userHasAccessToOrder(user, orderId);
+  if (!hasAccess) {
     const error = new Error('No tiene permisos para ver esta orden');
     error.status = 403;
     throw error;
@@ -211,44 +265,55 @@ function validateStatusTransition(currentStatus, nextStatus) {
   return nextIndex >= currentIndex;
 }
 
-function updateStatus(orderId, user, status, comentarios = '') {
+async function updateStatus(orderId, user, status, comentarios = '') {
   if (!isValidOrderStatus(status)) {
     const error = new Error('Estado de orden inválido');
     error.status = 400;
     throw error;
   }
 
-  const order = requireOrder(orderId);
+  const transaction = await sequelize.transaction();
+  try {
+    const order = await loadOrder(orderId, transaction);
+    const hasAccess = await userHasAccessToOrder(user, orderId, transaction);
+    if (!hasAccess) {
+      const error = new Error('No tiene permisos para modificar esta orden');
+      error.status = 403;
+      throw error;
+    }
 
-  if (!userHasAccessToOrder(user, orderId)) {
-    const error = new Error('No tiene permisos para modificar esta orden');
-    error.status = 403;
+    if (order.estado === status) {
+      await transaction.commit();
+      const freshOrder = await loadOrder(orderId);
+      return orderToDTO(freshOrder);
+    }
+
+    if (!validateStatusTransition(order.estado, status)) {
+      const error = new Error('La transición de estado no es válida');
+      error.status = 400;
+      throw error;
+    }
+
+    order.estado = status;
+    if (status === ORDER_STATUS.DELIVERED) {
+      order.solucion = true;
+    }
+    await order.save({ transaction });
+
+    await HistorialEstado.create({
+      ordenId: order.id,
+      estado: status,
+      comentarios: comentarios || `Estado actualizado por ${user.nombreUsuario || user.id}`
+    }, { transaction });
+
+    await transaction.commit();
+
+    const updatedOrder = await loadOrder(orderId);
+    return orderToDTO(updatedOrder);
+  } catch (error) {
+    await transaction.rollback();
     throw error;
   }
-
-  if (order.estado === status) {
-    return orderToDTO(order);
-  }
-
-  if (!validateStatusTransition(order.estado, status)) {
-    const error = new Error('La transición de estado no es válida');
-    error.status = 400;
-    throw error;
-  }
-
-  const history = new HistorialEstado({
-    ordenId: order.id,
-    estado: status,
-    comentarios: comentarios || `Estado actualizado por ${user.nombreUsuario}`
-  });
-  order.addHistorial(history);
-  historialEstados.push(history);
-
-  if (status === ORDER_STATUS.DELIVERED) {
-    order.solucion = true;
-  }
-
-  return orderToDTO(order);
 }
 
 module.exports = {
