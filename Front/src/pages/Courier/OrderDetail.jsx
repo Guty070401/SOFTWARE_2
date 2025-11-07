@@ -10,28 +10,59 @@ function withParams(Component){
 }
 
 class OrderDetail extends React.Component {
-  state = { order: null, notFound: false, modal: false };
+  state = { order: null, notFound: false, modal: false, loading: false, error: null };
 
   componentDidMount(){
+    this._mounted = true;
     this.load();
     this.unsub = appState.on(EVENTS.ORDERS_CHANGED, ()=> this.load());
   }
-  componentWillUnmount(){ this.unsub && this.unsub(); }
+  componentWillUnmount(){
+    this.unsub && this.unsub();
+    this._mounted = false;
+  }
 
-  load() {
-  const { id } = this.props.params;
-  const o = appState.orders.find(x => String(x.id) === String(id));
-  this.setState({ order: o || null, notFound: !o });
-}
+  async load() {
+    const { id } = this.props.params;
+    if (!id) {
+      this.setState({ order: null, notFound: true });
+      return;
+    }
+    if (!this._mounted) return;
+    this.setState({ loading: true, error: null });
+    try {
+      let order = appState.orders.find(x => String(x.id) === String(id));
+      if (!order) {
+        order = await appState.getOrder(id);
+      }
+      if (!this._mounted) return;
+      this.setState({ order: order || null, notFound: !order, loading: false });
+    } catch (error) {
+      if (!this._mounted) return;
+      this.setState({ order: null, notFound: true, loading: false, error: error?.message || 'No se pudo cargar el pedido.' });
+    }
+  }
 
   async updateStatus(s){
     if (!this.state.order) return;
-    await appState.updateStatus(this.state.order.id, s);
-    this.setState({ modal:false });
+    try {
+      await appState.updateStatus(this.state.order.id, s);
+      this.setState({ modal:false, error: null });
+      await this.load();
+    } catch (error) {
+      this.setState({ modal:false, error: error?.message || 'No se pudo actualizar el estado.' });
+    }
   }
 
   render(){
     if (this.state.notFound) return <div className="card">Pedido no encontrado.</div>;
+    if (this.state.loading && !this.state.order) {
+      return (
+        <section className="max-w-2xl mx-auto">
+          <div className="card">Cargando pedido...</div>
+        </section>
+      );
+    }
     const o = this.state.order;
     if (!o) return null;
 
@@ -40,6 +71,11 @@ class OrderDetail extends React.Component {
 
     return (
       <section className="grid lg:grid-cols-3 gap-6">
+        {this.state.error && (
+          <div className="lg:col-span-3">
+            <div className="card bg-rose-100 text-rose-700">{this.state.error}</div>
+          </div>
+        )}
         <div className="lg:col-span-2">
           <div className="card">
             <h1 className="text-xl font-semibold">Pedido #{o.id}</h1>
