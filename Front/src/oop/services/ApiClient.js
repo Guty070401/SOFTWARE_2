@@ -27,7 +27,7 @@ function getStorage() {
     if (typeof window !== "undefined" && window.localStorage) {
       return window.localStorage;
     }
-  } catch (_error) {
+  } catch {
     // Ignoramos errores de acceso (SSR o modo incógnito)
   }
   return null;
@@ -106,13 +106,13 @@ export default class ApiClient {
     if (contentType.includes("application/json")) {
       try {
         payload = await response.json();
-      } catch (_error) {
+      } catch {
         payload = null;
       }
     } else if (response.status !== 204) {
       try {
         payload = await response.text();
-      } catch (_error) {
+      } catch {
         payload = null;
       }
     }
