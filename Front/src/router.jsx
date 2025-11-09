@@ -6,10 +6,10 @@ import Login from "./pages/Login.jsx";
 import ChooseRole from "./pages/ChooseRole.jsx";
 import CustomerHome from "./pages/Customer/CustomerHome.jsx";
 import Cart from "./pages/customer/Cart.jsx";
-import Checkout from "./pages/customer/Checkout.jsx";
+import Checkout from "./pages/Customer/Checkout.jsx";
 import TrackOrder from "./pages/customer/TrackOrder.jsx";
 import CourierHome from "./pages/courier/CourierHome.jsx";
-import OrderDetail from "./pages/courier/OrderDetail.jsx";
+import OrderDetail from "./pages/Courier/OrderDetail.jsx";
 import Register from "./pages/Register.jsx";
 import CustomerOrders from "./pages/Customer/CustomerOrders";
 

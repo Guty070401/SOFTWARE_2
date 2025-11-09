@@ -55,7 +55,7 @@ class TrackOrder extends React.Component {
 
               <div className="mt-6">
                 <button className="btn" onClick={()=>this.props.navigate("/customer")}>
-                  Hacer un nuevo pedido
+                  Regresar a la Tienda
                 </button>
               </div>
             </>

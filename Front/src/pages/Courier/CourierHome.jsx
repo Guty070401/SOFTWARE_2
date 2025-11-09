@@ -18,7 +18,7 @@ class CourierHome extends React.Component {
     const { orders } = this.state;
     return (
       <section>
-        <h1 className="text-2xl font-semibold mb-4">Pedidos asignados</h1>
+        <h1 className="text-2xl font-semibold mb-4">Pedidos Asignados</h1>
         {!orders.length ? (
           <div className="card">
             <p className="text-slate-500">No hay pedidos aún. (Crea uno desde Cliente)</p>

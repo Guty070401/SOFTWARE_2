@@ -17,7 +17,7 @@ class Cart extends React.Component {
     this.unsub && this.unsub();
   }
 
-  // 🔹 Agrupa productos iguales por id
+  // Agrupa productos iguales por id
   getGroupedCart() {
     const grouped = {};
     for (const item of this.state.cart) {
@@ -30,7 +30,7 @@ class Cart extends React.Component {
     return Object.values(grouped);
   }
 
-  // 🔹 Quita una unidad del producto
+  // Quita una unidad del producto
   removeOne(id) {
     const index = this.state.cart.findIndex((i) => i.id === id);
     if (index !== -1) {
@@ -87,7 +87,7 @@ class Cart extends React.Component {
           </div>
         </div>
 
-        {/* 🔹 Total y botones */}
+        {/*Total y botones */}
         <aside>
           <div className="card">
             <div className="flex items-center justify-between">
@@ -107,7 +107,7 @@ class Cart extends React.Component {
               className="btn w-full mt-2"
               onClick={() => this.props.navigate("/customer")}
             >
-              Seguir comprando
+              Regresar a la Tienda
             </button>
           </div>
         </aside>

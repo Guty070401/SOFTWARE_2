@@ -40,7 +40,7 @@ export default class Login extends React.Component {
                 onChange={(e) => this.setState({ email: e.target.value })}
                 type="email"
                 required
-                placeholder="tucorreo@ejemplo.com"
+                placeholder="xxxxxxxx@ulima.edu.pe"
               />
             </div>
             <div>
