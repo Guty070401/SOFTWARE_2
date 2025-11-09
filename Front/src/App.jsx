@@ -1,13 +1,75 @@
 import React from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import appState from "./oop/state/AppState.js";
 import { EVENTS } from "./oop/state/events.js";
+
+function HeaderBar({ user, onLogout }) {
+  const { pathname } = useLocation();
+
+  // Ocultar Login/Registro en "/", "/login" y "/register"
+  const hideAuthButtons =
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register");
+
+  // Ocultar "Cambiar rol" en todo el flujo de cliente y en detalles de courier
+  const hideChangeRole =
+    // públicas / auth
+    pathname.startsWith("/choose-role") ||
+    // cliente
+    pathname.startsWith("/customer/cart") ||
+    pathname.startsWith("/customer/checkout") ||
+    pathname.startsWith("/customer/orders") ||
+    pathname.startsWith("/customer/track") ||
+    pathname.startsWith("/customer/order") ||
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/orders") ||
+    pathname.startsWith("/order") ||
+    // courier (detalle/seguimiento de pedidos)
+    pathname.startsWith("/courier/order") ||     // /courier/orders/:id o /courier/order-detail
+    pathname.startsWith("/courier/orders") ||    // listado de pedidos del courier
+    pathname.startsWith("/courier/track");       // seguimiento courier (si aplica)
+
+  return (
+    <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+      <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
+        <Link to="/" className="text-xl font-bold text-indigo-600">
+          UFOOD
+        </Link>
+
+        {!user && !hideAuthButtons && (
+          <nav className="flex gap-2 ml-auto">
+            <Link className="pill" to="/login">Login</Link>
+            <Link className="pill" to="/register">Registro</Link>
+          </nav>
+        )}
+
+        {user && (
+          <div className="flex gap-2 ml-auto items-center">
+            {!hideChangeRole && (
+              <Link className="pill" to="/choose-role">Cambiar rol</Link>
+            )}
+            <button
+              className="pill bg-red-500 text-white hover:bg-red-600"
+              onClick={onLogout}
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+
+
 
 export default class App extends React.Component {
   state = { user: null };
 
   componentDidMount() {
-    // Escuchar cambios de sesión (login / logout)
     this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => this.setState({ user: u }));
     this.setState({ user: appState.user });
   }
@@ -18,8 +80,7 @@ export default class App extends React.Component {
 
   logout() {
     appState.logout && appState.logout();
-    // 🔹 Redirigir al login
-    window.location.href = "/";
+    window.location.href = "/"; // redirige al login
   }
 
   render() {
@@ -27,33 +88,10 @@ export default class App extends React.Component {
 
     return (
       <div className="min-h-screen bg-slate-50 text-slate-800">
-        {/* 🔹 HEADER ADAPTABLE */}
-        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
-          <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
-            <span className="text-xl font-bold text-indigo-600">UFOOD</span>
+        {/* Header que se adapta por ruta */}
+        <HeaderBar user={user} onLogout={() => this.logout()} />
 
-            {/* Si el usuario NO está logueado */}
-            {!user ? (
-              <nav className="flex gap-2 ml-auto">
-                <Link className="pill" to="/">Login</Link>
-                <Link className="pill" to="/register">Registro</Link>
-              </nav>
-            ) : (
-              // Si el usuario SÍ está logueado
-              <div className="flex gap-2 ml-auto items-center">
-                <Link className="pill" to="/choose-role">Elegir rol</Link>
-                <button
-                  className="pill bg-red-500 text-white hover:bg-red-600"
-                  onClick={() => this.logout()}
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* 🔹 Contenido dinámico */}
+        {/* Contenido dinámico */}
         <main className="mx-auto max-w-6xl p-4">
           <Outlet />
         </main>
