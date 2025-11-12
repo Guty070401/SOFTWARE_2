@@ -21,6 +21,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -34,16 +35,20 @@
     "sequelize": "^6.37.3"
   },
   "devDependencies": {
-    "eslint": "^9.13.0",
+    "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-n": "^17.10.3",
-    "eslint-plugin-promise": "^7.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.1.1",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
     "nodemon": "^3.1.7"
   },
   "lint-staged": {
     "*.{js,ts,json}": "eslint --fix"
+  },
+  "overrides": {
+    "eslint": "^8.57.0",
+    "eslint-plugin-n": "^16.6.2"
   }
 }

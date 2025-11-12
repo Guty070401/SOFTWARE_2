@@ -1,8 +1,9 @@
-//Beta
-// Simulación de API; cámbialo por fetch/axios real si quieres.
-export default class ApiClient {
-  async post(url, data){ return { ok:true, data, url }; }
-  async get(url){ return { ok:true, data:[], url }; }
-}
+// ApiClient.js — adapta la capa OOP a nuestro cliente real
+import { api } from '../../services/api';
 
-// Falta conectar la función de la bd
+export default class ApiClient {
+  async post(url, data){ return api.post(url, data); }     // usar /api/*
+  async get(url){ return api.get(url); }
+  async patch(url, data){ return api.patch(url, data); }
+  async del(url){ return api.del(url); }
+}

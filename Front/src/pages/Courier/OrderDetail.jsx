@@ -2,7 +2,7 @@ import React from "react";
 import { useParams, Link } from "react-router-dom";
 import appState from "../../oop/state/AppState";
 import { EVENTS } from "../../oop/state/events";
-import OrderStatus from "../../oop/models/OrderStatus";
+import OrderStatus, { statusLabel } from "../../oop/models/OrderStatus";
 
 function withParams(Component){
   return (props)=> <Component {...props} params={useParams()} />;
@@ -43,19 +43,49 @@ class OrderDetail extends React.Component {
       ? " Volver a pedidos asignados"
       : " Volver a pedidos realizados";
 
+    const customerName = o.customerName || o.customer?.name || o.user?.name || null;
+
+    // Transición permitida: pending -> accepted -> picked -> on_route -> delivered
+    const nextStatus = (() => {
+      const s = String(o.status || '').toLowerCase();
+      if (s === OrderStatus.PENDING) return OrderStatus.ACCEPTED;
+      if (s === OrderStatus.ACCEPTED) return OrderStatus.PICKED;
+      if (s === OrderStatus.PICKED) return OrderStatus.ON_ROUTE;
+      if (s === OrderStatus.ON_ROUTE) return OrderStatus.DELIVERED;
+      return null;
+    })();
+
     return (
       <section className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="card">
             <h1 className="text-xl font-semibold">Pedido #{o.id}</h1>
-            <ul className="mt-3 space-y-2">
-              {o.items.map(it => (
-                <li key={it.id} className="flex items-center justify-between">
-                  <span className="text-slate-700">{it.name}</span>
-                  <span className="text-slate-500">S/ {it.price}</span>
-                </li>
-              ))}
-            </ul>
+            {customerName && (
+              <p className="text-sm text-slate-500 mt-1">Cliente: {customerName}</p>
+            )}
+            {Array.isArray(o.items) && o.items.length ? (
+              <ul className="mt-3 space-y-2">
+                {o.items.map((it, idx) => {
+                  const name = it.name || `Producto ${it.productoId || it.id}`;
+                  const qty = Number(it.qty ?? it.cantidad ?? 1);
+                  const price = Number(it.price ?? it.precio ?? 0);
+                  const lineTotal = (qty * price).toFixed(2);
+                  return (
+                    <li key={it.id ?? idx} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {it.image && (
+                          <img src={it.image} alt={name} className="w-12 h-12 object-cover rounded" />
+                        )}
+                        <span className="text-slate-700">{name} x{qty}</span>
+                      </div>
+                      <span className="text-slate-500">S/ {lineTotal}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-slate-500 mt-3">No hay ítems para mostrar.</p>
+            )}
           </div>
         </div>
 
@@ -63,11 +93,18 @@ class OrderDetail extends React.Component {
           <div className="card">
             <div className="flex items-center justify-between">
               <span className="text-slate-500">Estado</span>
-              <span className="pill capitalize">{o.status}</span>
+              <span className="pill">{statusLabel(o.status)}</span>
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className="text-slate-500">Total</span>
-              <span className="font-semibold">S/ {Number(o.total).toFixed(2)}</span>
+              {(() => {
+                const computed = (o.total != null)
+                  ? Number(o.total)
+                  : (Array.isArray(o.items)
+                    ? o.items.reduce((a, it) => a + (Number(it.price ?? it.precio ?? 0) * Number(it.qty ?? it.cantidad ?? 1)), 0)
+                    : 0);
+                return <span className="font-semibold">S/ {computed.toFixed(2)}</span>;
+              })()}
             </div>
 
             {/* 🔹 Botón dinámico de volver */}
@@ -85,8 +122,9 @@ class OrderDetail extends React.Component {
               <button
                 onClick={()=>this.setState({ modal:true })}
                 className="btn btn-primary w-full mt-4"
+                disabled={!nextStatus}
               >
-                Actualizar estado
+                {nextStatus ? `Cambiar a: ${statusLabel(nextStatus)}` : 'Sin acciones disponibles'}
               </button>
             )}
           </div>
@@ -95,21 +133,21 @@ class OrderDetail extends React.Component {
         {/* Modal visible solo si es courier */}
         {isCourier && this.state.modal && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-            <div className="card w-full max-w-sm">
-              <h3 className="text-lg font-semibold mb-2">Actualizar Estado</h3>
+            <div className="card relative w-full max-w-sm">
+              <button aria-label="Cerrar" onClick={()=>this.setState({ modal:false })} className="absolute right-3 top-3 text-slate-500 hover:text-slate-700">×</button>
+              <h3 className="text-lg font-semibold mb-4">Actualizar Estado</h3>
               <div className="grid gap-2">
-                {[OrderStatus.ACCEPTED, OrderStatus.PICKED, OrderStatus.ON_ROUTE, OrderStatus.DELIVERED, OrderStatus.CANCELED]
-                  .map(s => (
-                    <button
-                      key={s}
-                      className={`btn w-full ${s===OrderStatus.DELIVERED ? "btn-primary":""}`}
-                      onClick={()=>this.updateStatus(s)}
-                    >
-                      {s}
-                    </button>
-                ))}
+                {nextStatus ? (
+                  <button
+                    className="btn btn-primary w-full"
+                    onClick={()=>this.updateStatus(nextStatus)}
+                  >
+                    {`Cambiar a: ${statusLabel(nextStatus)}`}
+                  </button>
+                ) : (
+                  <span className="text-center text-slate-500">No hay transiciones disponibles</span>
+                )}
               </div>
-              <button onClick={()=>this.setState({ modal:false })} className="btn w-full mt-3">Cerrar</button>
             </div>
           </div>
         )}
@@ -119,3 +157,5 @@ class OrderDetail extends React.Component {
 }
 
 export default withParams(OrderDetail);
+
+

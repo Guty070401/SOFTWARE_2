@@ -1,78 +1,99 @@
 const jwt = require('jsonwebtoken');
+const { supabase } = require('../data/database');
 const Usuario = require('../models/Usuario');
-const { usuarios } = require('../data/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '1h';
 
-function findByEmail(email) {
+async function findByEmail(email) {
   const normalized = email.toLowerCase();
-  return Array.from(usuarios.values()).find((user) => user.correo === normalized) || null;
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('correo', normalized)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
 }
 
 function buildTokenPayload(user) {
+  return { id: user.id, rol: user.rol };
+}
+
+function toPublicUser(row) {
   return {
-    id: user.id,
-    rol: user.rol
+    id: row.id,
+    nombre: row.nombre_usuario,
+    correo: row.correo,
+    celular: row.celular,
+    foto: row.foto,
+    rol: row.rol,
+    solucion: row.solucion
   };
 }
 
-function toPublicUser(user) {
-  return user.toPublicJSON();
-}
-
 async function register({ nombre, correo, password, celular = '', rol = 'customer' }) {
-  if (!nombre || !correo || !password) {
-    const error = new Error('Nombre, correo y contraseña son obligatorios');
-    error.status = 400;
-    throw error;
+  const existing = await findByEmail(correo);
+  if (existing) {
+    const err = new Error('El correo ya está registrado');
+    err.status = 409;
+    throw err;
   }
 
-  if (findByEmail(correo)) {
-    const error = new Error('El correo ya se encuentra registrado');
-    error.status = 409;
-    throw error;
-  }
-
-  const usuario = await Usuario.createWithPassword({
+  const temp = new Usuario({
     nombreUsuario: nombre,
     correo,
-    password,
+    passwordHash: password, // si usas bcrypt, hashea aquí
     celular,
     rol
   });
 
-  usuarios.set(usuario.id, usuario);
+  const { data, error } = await supabase
+    .from('usuarios')
+    .insert({
+      id: temp.id,
+      nombre_usuario: temp.nombreUsuario,
+      correo: temp.correo,
+      celular: temp.celular,
+      password_hash: temp.passwordHash,
+      foto: temp.foto,
+      rol: temp.rol,
+      solucion: temp.solucion
+    })
+    .select()
+    .single();
 
-  const token = jwt.sign(buildTokenPayload(usuario), JWT_SECRET, { expiresIn: JWT_EXPIRES });
-  return { token, user: toPublicUser(usuario) };
+  if (error) throw error;
+
+  const token = jwt.sign(buildTokenPayload(data), JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  return { user: toPublicUser(data), token };
 }
 
 async function login({ correo, password }) {
-  const usuario = findByEmail(correo || '');
-  if (!usuario) {
-    const error = new Error('Credenciales inválidas');
-    error.status = 401;
-    throw error;
+  const user = await findByEmail(correo);
+  if (!user) {
+    const err = new Error('Credenciales inválidas');
+    err.status = 401;
+    throw err;
   }
-
-  const matches = await usuario.verifyPassword(password || '');
-  if (!matches) {
-    const error = new Error('Credenciales inválidas');
-    error.status = 401;
-    throw error;
+  // si usas hash real, compara aquí (bcrypt)
+  if (password !== user.password_hash) {
+    const err = new Error('Credenciales inválidas');
+    err.status = 401;
+    throw err;
   }
-
-  const token = jwt.sign(buildTokenPayload(usuario), JWT_SECRET, { expiresIn: JWT_EXPIRES });
-  return { token, user: toPublicUser(usuario) };
+  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  return { user: toPublicUser(user), token };
 }
 
 function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }
 
-function getUserById(id) {
-  return usuarios.get(id) || null;
+async function getUserById(id) {
+  const { data, error } = await supabase.from('usuarios').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data || null;
 }
 
 module.exports = {

@@ -2,7 +2,9 @@ import React from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import appState from "./oop/state/AppState.js";
 import { EVENTS } from "./oop/state/events.js";
-
+if (typeof window !== "undefined") {
+  window.appState = appState;
+}
 function HeaderBar({ user, onLogout }) {
   const { pathname } = useLocation();
 
@@ -82,7 +84,7 @@ export default class App extends React.Component {
     appState.logout && appState.logout();
     window.location.href = "/"; // redirige al login
   }
-
+  
   render() {
     const { user } = this.state;
 
@@ -98,4 +100,5 @@ export default class App extends React.Component {
       </div>
     );
   }
+  
 }

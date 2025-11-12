@@ -1,22 +1,15 @@
-// Servicio del regisstro y logeo de usuarios
-import ApiClient from "./ApiClient.js";
-import User from "../models/User.js";
+// Servicio de auth OOP conectado al backend real
+import { login as backendLogin, register as backendRegister, logout as backendLogout } from '../../services/authService';
+import User from '../models/User.js';
 
 export default class AuthService {
-  constructor(){ this.api = new ApiClient(); }
-
-  async login(email, _pass){
-    // Simula login
-    const name = email.split("@")[0] || "Usuario";
-    const user = new User(crypto.randomUUID?.() || Date.now().toString(), name, null, email);
-    await this.api.post("/login", { email });
-    return user;
+  async login(email, pass){
+    const u = await backendLogin({ correo: email, password: pass });
+    return new User(u.id, u.nombre || u.nombre_usuario || '', u.rol || null, u.correo || email);
   }
-
-  async register({ name, email }){
-    const user = new User(crypto.randomUUID?.() || Date.now().toString(), name, null, email);
-    await this.api.post("/register", { name, email });
-    return user;
+  async register({ name, email, password, celular, rol='customer' }){
+    const u = await backendRegister({ nombre: name, correo: email, password, celular, rol });
+    return new User(u.id, u.nombre || u.nombre_usuario || '', u.rol || 'customer', u.correo || email);
   }
+  logout(){ backendLogout(); }
 }
-

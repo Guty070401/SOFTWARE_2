@@ -1,9 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import appState from "../../oop/state/AppState";
+import appState from "../../oop/state/AppState";            // ✅ ruta correcta
 import Item from "../../oop/models/Item";
 import { EVENTS } from "../../oop/state/events";
+
+import { syncCatalog } from "../../services/catalog";       // ✅ NEW
+// import { api } from "../../services/api";                // si luego quieres leer del back
 
 import imgBembosLogo from '../../assets/images/bembos-logo.png';
 import imgBembosNuggets from '../../assets/images/nuggets.jpg';
@@ -47,6 +50,25 @@ storeMrSushi.addItem(new Item("p6", "Poke Atún Fresco", 29.90, "Base de arroz s
 const DEFAULT_STORES = [storeBembos, storeLaNevera, storeMrSushi];
 const LS_KEY = "catalog_stores";
 
+// ====== NEW: mapeos para IDs reales en Supabase ======
+const STORE_ID_MAP = {
+  s1: "bembos",
+  s2: "nevera_fit",
+  s3: "mr_sushi",
+};
+
+const PRODUCT_ID_MAP = {
+  // Bembos
+  p1: "bembos_nuggets",
+  p2: "bembos_burger",
+  // La Nevera Fit
+  p3: "nevera_acai",
+  p4: "nevera_toast",
+  // Mr. Sushi
+  p5: "mrsushi_acevichado",
+  p6: "mrsushi_poke",
+};
+
 export default class CustomerHome extends React.Component {
   state = {
     cartCount: 0,
@@ -86,16 +108,34 @@ export default class CustomerHome extends React.Component {
     this.setState({ stores });
   };
 
-  // Añadir al carrito
-  addToCart = (item) => {
-    const itemForCart = new Item(
-      item.id,
-      item.name,
-      item.price,
-      item.desc,
-      item.image,
-      1
-    );
+  // ====== NEW: sincronizar catálogo al backend/Supabase ======
+  onSyncCatalog = async () => {
+    try {
+      const resp = await syncCatalog();
+      console.log("[sync] ok =>", resp);
+      alert("Catálogo sincronizado en Supabase");
+      // Si más adelante listamos desde el backend, aquí haríamos un refetch
+    } catch (e) {
+      console.error(e);
+      alert("Error sincronizando catálogo: " + (e?.message || ""));
+    }
+  };
+
+  // Añadir al carrito (usando IDs reales para que el checkout no rompa)
+  addToCart = (item, store) => {
+    const backendProductId = PRODUCT_ID_MAP[item.id] || item.id;   // traduce p1..p6
+    const backendStoreId   = STORE_ID_MAP[store.id] || store.id;   // traduce s1..s3
+
+    const itemForCart = {
+      id: backendProductId,         // ✅ coincide con productos.id en Supabase
+      name: item.name,
+      price: Number(item.price),
+      desc: item.desc,
+      image: item.image,
+      qty: 1,
+      storeId: backendStoreId       // ✅ coincide con tiendas.id
+    };
+
     appState.addToCart(itemForCart);
   };
 
@@ -122,7 +162,7 @@ export default class CustomerHome extends React.Component {
       "https://via.placeholder.com/640x400?text=Producto";
 
     const newItem = {
-      id: `p_${Date.now()}`, // id local simple
+      id: `p_${Date.now()}`, // ✅ backticks (antes faltaban)
       name,
       price,
       desc,
@@ -190,7 +230,7 @@ export default class CustomerHome extends React.Component {
     if (Object.keys(patch).length) this.setState(patch);
   };
 
-  // Restablecer catálogo de fábrica
+  // Restablecer catálogo de fábrica (solo local)
   resetCatalog = () => {
     if (!confirm("¿Restablecer catálogo a los valores originales?")) return;
     localStorage.removeItem(LS_KEY);
@@ -214,17 +254,21 @@ export default class CustomerHome extends React.Component {
             <p className="text-slate-500">Elige tu tienda y platos favoritos</p>
           </div>
           <div className="flex items-center gap-2">
-  <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
-  <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
-    Reset catálogo
-  </button>
-  <Link to="/customer/cart" className="pill">
-    Carrito ({this.state.cartCount})
-  </Link>
-  <Link to="/customer/orders" className="pill">
-    Ver pedidos
-  </Link>
-</div>
+            <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
+            <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
+              Reset catálogo (local)
+            </button>
+            {/* ✅ NEW: sincroniza con Supabase vía backend */}
+            <button className="pill" onClick={this.onSyncCatalog} title="Upsert en Supabase">
+              Sincronizar catálogo
+            </button>
+            <Link to="/customer/cart" className="pill">
+              Carrito ({this.state.cartCount})
+            </Link>
+            <Link to="/customer/orders" className="pill">
+              Ver pedidos
+            </Link>
+          </div>
         </div>
 
         {/* Filtro por establecimiento */}
@@ -308,7 +352,10 @@ export default class CustomerHome extends React.Component {
                           <div className="mt-4 flex items-center justify-between">
                             <span className="font-semibold">S/ {it.price}</span>
                             <div className="flex gap-2">
-                              <button className="btn btn-secondary" onClick={() => this.addToCart(it)}>
+                              <button
+                                className="btn btn-secondary"
+                                onClick={() => this.addToCart(it, store)}   // ✅ usa mapeo a IDs reales
+                              >
                                 Agregar
                               </button>
                               <button
@@ -337,4 +384,3 @@ export default class CustomerHome extends React.Component {
     );
   }
 }
-

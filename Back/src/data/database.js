@@ -1,31 +1,16 @@
-const usuarios = new Map();
-const tarjetas = new Map();
-const tiendas = new Map();
-const productos = new Map();
-const ordenes = new Map();
-const ordenUsuarios = [];
-const ordenProductos = [];
-const historialEstados = [];
+// Back/src/data/database.js
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
-function clear() {
-  usuarios.clear();
-  tarjetas.clear();
-  tiendas.clear();
-  productos.clear();
-  ordenes.clear();
-  ordenUsuarios.length = 0;
-  ordenProductos.length = 0;
-  historialEstados.length = 0;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
+  throw new Error('Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE en .env');
 }
 
-module.exports = {
-  usuarios,
-  tarjetas,
-  tiendas,
-  productos,
-  ordenes,
-  ordenUsuarios,
-  ordenProductos,
-  historialEstados,
-  clear
-};
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+  auth: { persistSession: false }
+});
+
+module.exports = { supabase };

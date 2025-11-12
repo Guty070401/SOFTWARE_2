@@ -12,7 +12,7 @@ import CourierHome from "./pages/courier/CourierHome.jsx";
 import OrderDetail from "./pages/Courier/OrderDetail.jsx";
 import Register from "./pages/Register.jsx";
 import CustomerOrders from "./pages/Customer/CustomerOrders";
-
+import AdminCatalog from './pages/AdminCatalog';
 // Rutas de la aplicación
 const router = createBrowserRouter([
   { path: "/", element: <App />,
@@ -26,8 +26,9 @@ const router = createBrowserRouter([
       { path: "customer/track", element: <TrackOrder /> },
       { path: "courier", element: <CourierHome /> },
       { path: "courier/order/:id", element: <OrderDetail /> },
+      { path: "customer/order/:id", element: <OrderDetail /> },
       { path: "/customer/orders", element: <CustomerOrders /> },
-
+      { path: 'admin/catalog', element: <AdminCatalog /> },
     ]
   }
 ]);
