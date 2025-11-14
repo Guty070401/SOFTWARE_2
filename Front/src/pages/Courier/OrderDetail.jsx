@@ -57,6 +57,12 @@ export class OrderDetail extends React.Component {
     const currentStatusKey = String(o.status || '').toLowerCase();
     const currentIndex = statusFlow.indexOf(currentStatusKey);
     const nextStatus = currentIndex >= 0 ? statusFlow[currentIndex + 1] ?? null : null;
+    const paymentSummary =
+      o.paymentSummary ||
+      o.paymentDetails?.publicSummary ||
+      o.paymentDetails?.userSummary ||
+      (typeof o.comentarios === "string" ? o.comentarios : "") ||
+      (typeof o.comentario === "string" ? o.comentario : "");
 
     return (
       <section className="grid lg:grid-cols-3 gap-6">
@@ -119,6 +125,12 @@ export class OrderDetail extends React.Component {
                 {backLabel}
               </Link>
             </div>
+            {paymentSummary && (
+              <div className="mt-4 rounded-lg bg-slate-50 p-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase">Pago</p>
+                <p className="text-sm text-slate-700">{paymentSummary}</p>
+              </div>
+            )}
 
             {/* Solo el repartidor puede actualizar estado */}
             {isCourier && (

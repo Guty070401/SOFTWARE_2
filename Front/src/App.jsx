@@ -8,7 +8,7 @@ if (typeof window !== "undefined") {
 }
 
 /* ================== Header ================== */
-function HeaderBar({ user, onLogout }) {
+
 export function HeaderBar({ user, onLogout }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
