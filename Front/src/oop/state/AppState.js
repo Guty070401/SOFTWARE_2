@@ -73,9 +73,14 @@ export class AppState {
   }
 
   // --- Orders ---
-  async placeOrder(){
+  async placeOrder(meta = {}){
     const cartSnapshot = Array.isArray(this.cart) ? [...this.cart] : [];
-    const order = await this.orderSrv.placeOrder(cartSnapshot);
+    const paymentDetails = meta?.paymentDetails || null;
+    const extraPayload = {};
+    if (paymentDetails?.publicSummary) {
+      extraPayload.comentarios = paymentDetails.publicSummary;
+    }
+    const order = await this.orderSrv.placeOrder(cartSnapshot, { extraPayload });
 
     // Intentar obtener detalle real desde backend
     try {
@@ -83,6 +88,14 @@ export class AppState {
       if (fromApi && typeof fromApi === 'object') Object.assign(order, fromApi);
     } catch (e) {
       console.warn('[AppState] No se pudo obtener detalle de orden. Usando datos locales.', e);
+    }
+
+    if (paymentDetails) {
+      order.paymentDetails = paymentDetails;
+      if (paymentDetails.publicSummary) {
+        order.paymentSummary = paymentDetails.publicSummary;
+        if (!order.comentarios) order.comentarios = paymentDetails.publicSummary;
+      }
     }
 
     // Enriquecer con snapshot del carrito si faltan datos

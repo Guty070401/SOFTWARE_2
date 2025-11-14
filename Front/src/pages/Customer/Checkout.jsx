@@ -14,7 +14,11 @@ export class Checkout extends React.Component {
     this.state = {
       ...this.controller.getState(),
       paymentMethod: "card",
-      detailsSaved: false,
+      showCardModal: false,
+      cardForm: { cardNumber: "", mm: "", yy: "", cvv: "", cardName: "" },
+      cashForm: { amount: "", notes: "" },
+      savedDetails: { card: null, cash: null },
+      detailsError: "",
     };
   }
 
@@ -37,104 +41,181 @@ export class Checkout extends React.Component {
     this.unsubscribe?.();
   }
 
+  getCurrentPaymentDetails() {
+    const method = this.state.paymentMethod;
+    if (!method) return null;
+    return this.state.savedDetails[method] || null;
+  }
+
+  isPaymentReady() {
+    return Boolean(this.getCurrentPaymentDetails());
+  }
+
   handlePay = (event) => {
-    this.controller.pay({ event, navigate: this.props.navigate });
+    const paymentDetails = this.getCurrentPaymentDetails();
+    this.controller.pay({
+      event,
+      navigate: this.props.navigate,
+      paymentDetails,
+    });
   };
 
   handlePaymentMethodChange = (event) => {
-    this.setState({ paymentMethod: event.target.value, detailsSaved: false });
+    const nextMethod = event.target.value;
+    this.setState((prev) => {
+      return {
+        paymentMethod: nextMethod,
+        showCardModal: false,
+        detailsError: "",
+      };
+    });
   };
 
-  handleSavePaymentDetails = () => {
-    this.setState({ detailsSaved: true });
-  };
-
-  renderPaymentFields() {
-    const method = this.state.paymentMethod;
-    if (!method) {
-      return (
-        <p className="text-sm text-slate-500">
-          Selecciona un método para ingresar los datos de pago.
-        </p>
-      );
+  handleCardInputChange = (field, value) => {
+    if (field === "cardNumber") {
+      const digits = (value || "").replace(/\D/g, "").slice(0, 16);
+      const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1-");
+      this.setState((prev) => ({
+        cardForm: { ...prev.cardForm, cardNumber: formatted },
+      }));
+      return;
     }
-    if (method === "card") {
+    if (field === "mm" || field === "yy" || field === "cvv") {
+      const limit = field === "cvv" ? 3 : 2;
+      const digits = (value || "").replace(/\D/g, "").slice(0, limit);
+      this.setState((prev) => ({
+        cardForm: { ...prev.cardForm, [field]: digits },
+      }));
+      return;
+    }
+    this.setState((prev) => ({
+      cardForm: { ...prev.cardForm, [field]: value },
+    }));
+  };
+
+  handleCashInputChange = (field, value) => {
+    this.setState((prev) => ({
+      cashForm: { ...prev.cashForm, [field]: value },
+    }));
+  };
+
+  handleSaveCardDetails = () => {
+    const { cardNumber, mm, yy, cvv, cardName } = this.state.cardForm;
+    const digits = (cardNumber || "").replace(/\D/g, "");
+    if (
+      digits.length !== 16 ||
+      mm.length !== 2 ||
+      yy.length !== 2 ||
+      cvv.length !== 3 ||
+      !cardName.trim()
+    ) {
+      this.setState({
+        detailsError: "Completa la información de la tarjeta para continuar.",
+      });
+      return;
+    }
+
+    const last4 = digits.slice(-4);
+    const userSummary = `Tarjeta terminada en ${last4}`;
+    const publicSummary = "Pago con tarjeta confirmado";
+    const savedEntry = {
+      method: "card",
+      userSummary,
+      publicSummary,
+    };
+
+    this.setState((prev) => ({
+      savedDetails: { ...prev.savedDetails, card: savedEntry },
+      showCardModal: false,
+      detailsError: "",
+      cardForm: { cardNumber: "", mm: "", yy: "", cvv: "", cardName: "" },
+    }));
+  };
+
+  handleSaveCashDetails = () => {
+    const { amount, notes } = this.state.cashForm;
+    const numeric = Number(amount);
+    if (!amount || Number.isNaN(numeric) || numeric <= 0) {
+      this.setState({
+        detailsError: "Ingresa el monto con el que pagarás.",
+      });
+      return;
+    }
+    const formattedAmount = Number(numeric).toFixed(2);
+    const amountText = `Pagará con S/ ${formattedAmount}`;
+    const noteValue = notes?.trim() || "";
+    const userSummary = noteValue ? `${amountText} · Nota: ${noteValue}` : amountText;
+    const publicAmount = amountText.toUpperCase();
+    const publicSummary = noteValue ? `${publicAmount}. Nota: ${noteValue}` : publicAmount;
+    const savedEntry = {
+      method: "cash",
+      amount: formattedAmount,
+      notes: noteValue,
+      userSummary,
+      publicSummary,
+    };
+    this.setState((prev) => ({
+      savedDetails: { ...prev.savedDetails, cash: savedEntry },
+      detailsError: "",
+    }));
+  };
+
+  handleEditCashDetails = () => {
+    this.setState((prev) => ({
+      savedDetails: { ...prev.savedDetails, cash: null },
+      detailsError: "",
+    }));
+  };
+
+  openCardModal = () => {
+    if (this.state.paymentMethod === "card") {
+      this.setState({ showCardModal: true, detailsError: "" });
+    }
+  };
+
+  closeCardModal = () => {
+    this.setState({ showCardModal: false, detailsError: "" });
+  };
+
+  renderCashFields(saved) {
+    if (saved) {
       return (
-        <div className="grid gap-3" aria-label="Datos de tarjeta">
-          <input
-            className="input"
-            name="cardNumber"
-            placeholder="Nro. tarjeta (XXXX-XXXX-XXXX-XXXX)"
-            maxLength={19}
-            inputMode="numeric"
-            onInput={(e) => {
-              const digits = (e.target.value || "")
-                .replace(/\D/g, "")
-                .slice(0, 16);
-              e.target.value = digits.replace(/(\d{4})(?=\d)/g, "$1-");
-            }}
-            required
-          />
-          <div className="grid grid-cols-3 gap-3">
-            <input
-              className="input"
-              name="mm"
-              placeholder="MM"
-              pattern="(0[1-9]|1[0-2])"
-              maxLength={2}
-              required
-            />
-            <input
-              className="input"
-              name="yy"
-              placeholder="AA"
-              pattern="[0-9]{2}"
-              maxLength={2}
-              required
-            />
-            <input
-              className="input"
-              name="cvv"
-              placeholder="CVV"
-              pattern="[0-9]{3}"
-              maxLength={3}
-              required
-            />
-          </div>
-          <input
-            className="input"
-            name="cardName"
-            placeholder="Nombre en la tarjeta"
-            required
-          />
+        <div className="rounded border border-slate-200 p-3 bg-slate-50">
+          <p className="text-sm text-slate-500">Datos guardados</p>
+          <p className="font-medium text-slate-700">{saved.userSummary}</p>
           <button
             type="button"
-            className="btn btn-secondary max-w-fit"
-            onClick={this.handleSavePaymentDetails}
+            className="btn btn-secondary mt-3"
+            onClick={this.handleEditCashDetails}
           >
-            Guardar datos
+            Editar monto
           </button>
         </div>
       );
     }
+
     return (
       <div className="grid gap-3" aria-label="Pago en efectivo">
         <input
           className="input"
           name="cashAmount"
           placeholder="Monto con el que pagarás"
-          inputMode="numeric"
+          inputMode="decimal"
+          value={this.state.cashForm.amount}
+          onChange={(e) => this.handleCashInputChange("amount", e.target.value)}
           required
         />
         <textarea
           className="input min-h-[90px]"
           name="notes"
           placeholder="Indicaciones para el repartidor (opcional)"
+          value={this.state.cashForm.notes}
+          onChange={(e) => this.handleCashInputChange("notes", e.target.value)}
         ></textarea>
         <button
           type="button"
           className="btn btn-secondary max-w-fit"
-          onClick={this.handleSavePaymentDetails}
+          onClick={this.handleSaveCashDetails}
         >
           Guardar datos
         </button>
@@ -142,7 +223,153 @@ export class Checkout extends React.Component {
     );
   }
 
+  renderPaymentFields() {
+    const method = this.state.paymentMethod;
+    const saved = method ? this.state.savedDetails[method] : null;
+    let content = null;
+
+    if (!method) {
+      content = (
+        <p className="text-sm text-slate-500">
+          Selecciona un método para ingresar los datos de pago.
+        </p>
+      );
+    } else if (method === "card") {
+      content = saved ? (
+        <div className="rounded border border-slate-200 p-3 bg-slate-50">
+          <p className="text-sm text-slate-500">Datos de tarjeta guardados</p>
+          <p className="font-medium text-slate-700">{saved.userSummary}</p>
+          <button
+            type="button"
+            className="btn btn-secondary mt-3"
+            onClick={this.openCardModal}
+          >
+            Editar tarjeta
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-2" aria-label="Datos de tarjeta">
+          <p className="text-sm text-slate-500">
+            Necesitas ingresar los datos de tu tarjeta para continuar.
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary max-w-fit"
+            onClick={this.openCardModal}
+          >
+            Ingresar tarjeta
+          </button>
+        </div>
+      );
+    } else if (method === "cash") {
+      content = this.renderCashFields(saved);
+    }
+
+    return (
+      <>
+        {content}
+        {this.state.detailsError && (
+          <p className="text-sm text-red-600 mt-2">{this.state.detailsError}</p>
+        )}
+      </>
+    );
+  }
+
+  renderCardModal() {
+    if (
+      this.state.paymentMethod !== "card" ||
+      !this.state.showCardModal
+    ) {
+      return null;
+    }
+
+    const { cardForm } = this.state;
+
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
+        <div className="card relative w-full max-w-md">
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={this.closeCardModal}
+            className="absolute right-3 top-3 text-slate-500 hover:text-slate-700 text-xl leading-none"
+          >
+            ×
+          </button>
+          <h2 className="text-lg font-semibold mb-4">Datos de tarjeta</h2>
+          <div className="grid gap-3" aria-label="Formulario de tarjeta">
+            <input
+              className="input"
+              name="cardNumber"
+              placeholder="Nro. tarjeta (XXXX-XXXX-XXXX-XXXX)"
+              maxLength={19}
+              inputMode="numeric"
+              value={cardForm.cardNumber}
+              onChange={(e) =>
+                this.handleCardInputChange("cardNumber", e.target.value)
+              }
+              required
+            />
+            <div className="grid grid-cols-3 gap-3">
+              <input
+                className="input"
+                name="mm"
+                placeholder="MM"
+                pattern="(0[1-9]|1[0-2])"
+                maxLength={2}
+                value={cardForm.mm}
+                onChange={(e) => this.handleCardInputChange("mm", e.target.value)}
+                required
+              />
+              <input
+                className="input"
+                name="yy"
+                placeholder="AA"
+                pattern="[0-9]{2}"
+                maxLength={2}
+                value={cardForm.yy}
+                onChange={(e) => this.handleCardInputChange("yy", e.target.value)}
+                required
+              />
+              <input
+                className="input"
+                name="cvv"
+                placeholder="CVV"
+                pattern="[0-9]{3}"
+                maxLength={3}
+                value={cardForm.cvv}
+                onChange={(e) => this.handleCardInputChange("cvv", e.target.value)}
+                required
+              />
+            </div>
+            <input
+              className="input"
+              name="cardName"
+              placeholder="Nombre en la tarjeta"
+              value={cardForm.cardName}
+              onChange={(e) => this.handleCardInputChange("cardName", e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={this.handleSaveCardDetails}
+            >
+              Guardar datos
+            </button>
+            {this.state.detailsError && (
+              <p className="text-sm text-red-600">{this.state.detailsError}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+
   render() {
+    const paymentReady = this.isPaymentReady();
     return (
       <section className="max-w-2xl mx-auto">
         <div className="card">
@@ -215,7 +442,7 @@ export class Checkout extends React.Component {
               disabled={
                 this.state.paying ||
                 !this.state.paymentMethod ||
-                !this.state.detailsSaved
+                !paymentReady
               }
             >
               {this.state.paying ? "Procesando..." : "Pagar y crear pedido"}
@@ -227,6 +454,7 @@ export class Checkout extends React.Component {
             >
               Volver al carrito
             </Link>
+            {this.renderCardModal()}
           </form>
         </div>
       </section>

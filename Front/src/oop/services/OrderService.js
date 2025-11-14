@@ -4,14 +4,24 @@ import ApiClient from './ApiClient.js';
 export default class OrderService {
   constructor(){ this.api = new ApiClient(); }
 
-  async placeOrder(cart, storeIdOverride = null){
+  async placeOrder(cart, options = {}){
+    const { storeIdOverride = null, extraPayload = {} } = options;
     if (!Array.isArray(cart) || cart.length === 0) throw new Error('Carrito vacío');
     const storeId = storeIdOverride || cart[0]?.storeId || 'store_demo';
     const items = cart.map(i => ({ productoId: i.id, cantidad: i.qty ?? 1 }));
-    const payload = { storeId, items, tarjetaId: null, direccionEntrega: 'Dirección demo', comentarios: '' };
+    const payload = {
+      storeId,
+      items,
+      tarjetaId: null,
+      direccionEntrega: 'Dirección demo',
+      comentarios: '',
+      ...extraPayload,
+    };
     const { order } = await this.api.post('/api/orders', payload);
     return order;
   }
+
+
 
   async updateStatus(order, status){
     const sLower = String(status || '').toLowerCase();
