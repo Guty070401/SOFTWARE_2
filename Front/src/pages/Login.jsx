@@ -4,11 +4,10 @@ import appState from "../oop/state/AppState.js";
 import { EVENTS } from "../oop/state/events.js";
 import mascotaImg from "../assets/images/mascota.jpg"; // 👈 tu imagen
 
-export default class Login extends React.Component {
-  state = { email: "", pass: "", logged: false };
+export class Login extends React.Component {
+  state = { email: "", pass: "", logged: false, error: "" };
 
   componentDidMount() {
-    // Escucha cambios en la autenticación
     this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => {
       if (u) this.setState({ logged: true });
     });
@@ -18,14 +17,17 @@ export default class Login extends React.Component {
     this.unsub && this.unsub();
   }
 
-  async onSubmit(e) {
-    e.preventDefault();
-    // Inicia sesión con el estado actual
-    await appState.login(this.state.email, this.state.pass);
+  async onSubmit(event) {
+    event.preventDefault();
+    this.setState({ error: "" });
+    try {
+      await appState.login(this.state.email, this.state.pass);
+    } catch (err) {
+      this.setState({ error: err?.message || "No se pudo iniciar sesión." });
+    }
   }
 
   render() {
-    // Si el usuario ya está logueado, lo redirige
     if (this.state.logged) return <Navigate to="/choose-role" replace />;
 
     return (
@@ -53,9 +55,12 @@ export default class Login extends React.Component {
                 onChange={(e) => this.setState({ pass: e.target.value })}
                 type="password"
                 required
-                placeholder="••••••••"
+                placeholder="********"
               />
             </div>
+            {this.state.error && (
+              <p className="text-sm text-red-600">{this.state.error}</p>
+            )}
             <button className="btn btn-primary w-full">Entrar</button>
           </form>
           <p className="text-sm text-slate-500 mt-4">
@@ -87,3 +92,5 @@ export default class Login extends React.Component {
     );
   }
 }
+
+export default Login;

@@ -1,71 +1,70 @@
-const router = require('express').Router();
-const { supabase } = require('../data/database');
-const requireAuth = require('../middlewares/requireAuth');
+const router = require("express").Router();
+const requireAuth = require("../middlewares/requireAuth");
+const orderService = require("../services/orderService");
+const chatController = require("../controllers/chatController");
 
-// POST /api/orders  -> crear orden
-router.post('/', requireAuth, async (req, res) => {
-  const { storeId, items = [], tarjetaId = null, direccionEntrega = null, comentarios = null } = req.body || {};
-  if (!storeId || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: 'storeId e items son requeridos' });
-  }
-
-  // tracking simple
-  const tracking = 'ORD-' + Date.now();
-
-  // 1) Orden
-  const insertOrden = {
-    tracking,
-    fecha: new Date(),
-    estado: 'CREATED',
-    solucion: false,
-    tiempo_estimado: 30,
-    tienda_id: storeId,
-    tarjeta_id: tarjetaId,
-    direccion_entrega: direccionEntrega,
-    comentarios
-  };
-
-  const { data: orden, error: e1 } = await supabase.from('ordenes').insert(insertOrden).select().single();
-  if (e1) return res.status(500).json({ message: e1.message });
-
-  // 2) Items
-  const rows = items.map(it => ({
-    orden_id: orden.id,
-    producto_id: it.productoId,
-    cantidad: it.cantidad || 1,
-    precio_unitario: Number(it.precioUnitario || it.precio || 0)
+const normalizeItems = (items = []) => {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => ({
+    productoId: item.productoId ?? item.productId ?? item.id,
+    cantidad: Number(item.cantidad ?? item.qty ?? item.quantity ?? 1),
+    precio: Number(item.precio ?? item.price ?? 0),
   }));
-  if (rows.length) {
-    const { error: e2 } = await supabase.from('orden_productos').insert(rows);
-    if (e2) return res.status(500).json({ message: e2.message });
+};
+
+const sendError = (res, error) =>
+  res.status(error?.status || 500).json({ message: error?.message || "Error" });
+
+router.get("/", requireAuth, async (req, res) => {
+  try {
+    const orders = await orderService.listOrdersForUser(req.userId);
+    res.json({ orders });
+  } catch (error) {
+    sendError(res, error);
   }
-
-  // 3) Propietario
-  const { error: e3 } = await supabase.from('orden_usuarios').insert({
-    orden_id: orden.id,
-    usuario_id: req.userId,
-    es_propietario: true,
-    es_repartidor: false
-  });
-  if (e3) return res.status(500).json({ message: e3.message });
-
-  // 4) Historial inicial
-  const { error: e4 } = await supabase.from('historial_estados').insert({
-    orden_id: orden.id, estado: 'CREATED', comentarios: 'Orden creada'
-  });
-  if (e4) return res.status(500).json({ message: e4.message });
-
-  res.status(201).json({ order: { id: orden.id, tracking: orden.tracking } });
 });
 
-// GET /api/orders/:id  -> obtener una orden
-router.get('/:id', requireAuth, async (req, res) => {
-  const id = req.params.id;
-  const { data: o, error: e1 } = await supabase.from('ordenes').select('*').eq('id', id).single();
-  if (e1) return res.status(404).json({ message: e1.message });
-  const { data: items, error: e2 } = await supabase.from('orden_productos').select('*').eq('orden_id', id);
-  if (e2) return res.status(500).json({ message: e2.message });
-  res.json({ order: o, items });
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    const storeId = req.body.storeId ?? req.body.tiendaId;
+    const items = normalizeItems(req.body.items);
+    if (!storeId) return res.status(400).json({ message: "storeId es requerido" });
+    if (!items.length) return res.status(400).json({ message: "items no puede estar vacío" });
+
+    const payload = {
+      storeId,
+      items,
+      tarjetaId: req.body.tarjetaId ?? req.body.cardId ?? null,
+      direccionEntrega: req.body.direccion ?? req.body.direccionEntrega ?? req.body.address ?? "",
+      comentarios: req.body.comentarios ?? req.body.notes ?? "",
+    };
+    const order = await orderService.createOrder(req.userId, payload);
+    res.status(201).json({ order });
+  } catch (error) {
+    console.error("[orders] create error", error);
+    sendError(res, error);
+  }
 });
+
+router.get("/:id", requireAuth, async (req, res) => {
+  try {
+    const order = await orderService.getOrderByIdForUser(req.params.id, req.userId);
+    res.json({ order });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch("/:id/status", requireAuth, async (req, res) => {
+  try {
+    const order = await orderService.updateStatus(req.params.id, req.body.status);
+    res.json({ order });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get("/:id/chat", requireAuth, chatController.listChat);
+router.post("/:id/chat", requireAuth, chatController.sendChat);
 
 module.exports = router;

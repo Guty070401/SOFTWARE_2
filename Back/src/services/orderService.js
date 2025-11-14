@@ -1,5 +1,6 @@
 // Back/src/services/orderService.js  (CommonJS)
 const { supabase } = require('../data/database');
+const { randomUUID } = require('node:crypto');
 const Orden = require('../models/Orden');
 const OrdenUsuario = require('../models/OrdenUsuario');
 const OrdenProducto = require('../models/OrdenProducto');
@@ -7,6 +8,29 @@ const HistorialEstado = require('../models/HistorialEstado');
 const { ORDER_STATUS, ORDER_STATUS_FLOW, isValidOrderStatus } = require('../constants/orderStatus');
 const authService = require('./authService');
 const storeService = require('./storeService');
+
+const STATUS_ALIAS_MAP = new Map([
+  ['created', ORDER_STATUS.PENDING],
+  ['pending', ORDER_STATUS.PENDING],
+  ['pendiente', ORDER_STATUS.PENDING],
+  ['accepted', ORDER_STATUS.ACCEPTED],
+  ['aceptado', ORDER_STATUS.ACCEPTED],
+  ['picked', ORDER_STATUS.PICKED],
+  ['recogido', ORDER_STATUS.PICKED],
+  ['on_route', ORDER_STATUS.ON_ROUTE],
+  ['en_camino', ORDER_STATUS.ON_ROUTE],
+  ['delivered', ORDER_STATUS.DELIVERED],
+  ['entregado', ORDER_STATUS.DELIVERED],
+  ['canceled', ORDER_STATUS.CANCELED],
+  ['cancelled', ORDER_STATUS.CANCELED],
+  ['cancelado', ORDER_STATUS.CANCELED],
+]);
+
+function normalizeStatusValue(value) {
+  if (!value) return null;
+  const key = String(value).toLowerCase().replace(/\s+/g, '_');
+  return STATUS_ALIAS_MAP.get(key) || null;
+}
 
 function orderToDTO(orderRow, items = [], store = null) {
   const total = items.reduce((s, it) => s + Number(it.precio_unitario) * Number(it.cantidad), 0);
@@ -97,34 +121,36 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     }
   }
 
-  const order = new Orden({
+ const order = new Orden({
     tiendaId: store.id,
     tarjetaId: tarjetaId || null,
     direccionEntrega: direccionEntrega || '',
     comentarios: comentarios || ''
   });
+  order.id = randomUUID();
 
   const itemsToInsert = [];
   for (const it of items) {
-    const product = await storeService.getProduct(it.productoId);
-    if (!product || product.tiendaId !== store.id) {
-      const error = new Error(`Producto no encontrado o no pertenece a la tienda: ${it.productoId}`);
-      error.status = 404;
+    const cantidad = Number(it.cantidad) || 1;
+    const precioUnitario = Number(it.precio ?? it.precioUnitario ?? 0);
+    if (Number.isNaN(precioUnitario)) {
+      const error = new Error(`Precio inválido para el producto: ${it.productoId}`);
+      error.status = 400;
       throw error;
     }
-    const cantidad = Number(it.cantidad) || 1;
     const op = new OrdenProducto({
       ordenId: order.id,
-      productoId: product.id,
+      productoId: it.productoId,
       cantidad,
-      precioUnitario: product.precio
+      precioUnitario,
     });
+    const opRowId = randomUUID();
     itemsToInsert.push({
-      id: op.id,
+      id: opRowId,
       orden_id: op.ordenId,
       producto_id: op.productoId,
       cantidad: op.cantidad,
-      precio_unitario: op.precioUnitario
+      precio_unitario: op.precioUnitario,
     });
   }
 
@@ -134,7 +160,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
       id: order.id,
       tracking: order.tracking,
       fecha: order.fecha.toISOString().slice(0, 10),
-      hora: order.hora.toISOString(),
+      hora: order.hora.toISOString().slice(11, 19),
       estado: order.estado,
       solucion: order.solucion,
       tiempo_estimado: order.tiempoEstimado,
@@ -153,9 +179,10 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     esPropietario: true,
     esRepartidor: false
   });
+  const ownerRowId = randomUUID();
 
   const { error: errLink } = await supabase.from('orden_usuarios').insert({
-    id: owner.id,
+    id: ownerRowId,
     orden_id: owner.ordenId,
     usuario_id: owner.usuarioId,
     es_propietario: owner.esPropietario,
@@ -172,11 +199,12 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     ordenId: order.id,
     estado: insertedOrder.estado,
     comentarios: insertedOrder.comentarios,
-    hora: new Date(insertedOrder.hora)
+    hora: new Date()
   });
 
+  const histRowId = randomUUID();
   const { error: errHist } = await supabase.from('historial_estados').insert({
-    id: he.id,
+    id: histRowId,
     orden_id: he.ordenId,
     estado: he.estado,
     comentarios: he.comentarios,
@@ -220,7 +248,8 @@ async function getOrderByIdForUser(orderId, userId) {
 }
 
 async function updateStatus(orderId, status) {
-  if (!isValidOrderStatus(status)) {
+  const nextStatus = normalizeStatusValue(status);
+  if (!nextStatus || !isValidOrderStatus(nextStatus)) {
     const e = new Error('Estado no válido');
     e.status = 400;
     throw e;
@@ -234,18 +263,19 @@ async function updateStatus(orderId, status) {
     throw e;
   }
 
-  const allowedNext = ORDER_STATUS_FLOW[o.estado] || [];
-  if (!allowedNext.includes(status)) {
-    const e = new Error(`Transición inválida de ${o.estado} a ${status}`);
+  const currentStatus = normalizeStatusValue(o.estado);
+  const allowedNext = ORDER_STATUS_FLOW[currentStatus] || [];
+  if (!allowedNext.includes(nextStatus)) {
+    const e = new Error(`Transición inválida de ${o.estado} a ${nextStatus}`);
     e.status = 400;
     throw e;
   }
 
-  const solucion = status === ORDER_STATUS.DELIVERED ? true : o.solucion;
+  const solucion = nextStatus === ORDER_STATUS.DELIVERED ? true : o.solucion;
 
   const { data: updated, error: errUpd } = await supabase
     .from('ordenes')
-    .update({ estado: status, solucion })
+    .update({ estado: nextStatus, solucion })
     .eq('id', orderId)
     .select()
     .single();
@@ -253,12 +283,13 @@ async function updateStatus(orderId, status) {
 
   const he = new HistorialEstado({
     ordenId: orderId,
-    estado: status,
+    estado: nextStatus,
     comentarios: '',
     hora: new Date()
   });
+  const statusHistRowId = randomUUID();
   const { error: errHist } = await supabase.from('historial_estados').insert({
-    id: he.id,
+    id: statusHistRowId,
     orden_id: he.ordenId,
     estado: he.estado,
     comentarios: he.comentarios,

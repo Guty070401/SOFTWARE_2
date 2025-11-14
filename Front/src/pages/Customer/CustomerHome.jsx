@@ -69,7 +69,7 @@ const PRODUCT_ID_MAP = {
   p6: "mrsushi_poke",
 };
 
-export default class CustomerHome extends React.Component {
+export class CustomerHome extends React.Component {
   state = {
     cartCount: 0,
     selectedStoreId: null,   // abrir/cerrar productos de una tienda
@@ -96,6 +96,7 @@ export default class CustomerHome extends React.Component {
     } else {
       this.setState({ stores: DEFAULT_STORES });
     }
+    this.ensureCatalogSynced();
   }
 
   componentWillUnmount() {
@@ -106,6 +107,17 @@ export default class CustomerHome extends React.Component {
   saveStores = (stores) => {
     localStorage.setItem(LS_KEY, JSON.stringify(stores));
     this.setState({ stores });
+  };
+
+  ensureCatalogSynced = async () => {
+    if (localStorage.getItem("catalog_synced")) return;
+    try {
+      await syncCatalog();
+      localStorage.setItem("catalog_synced", "1");
+      console.log("[catalog] sincronizado autom·ticamente");
+    } catch (error) {
+      console.warn("[catalog] no se pudo sincronizar autom·ticamente", error);
+    }
   };
 
   // ====== NEW: sincronizar cat√°logo al backend/Supabase ======
@@ -384,3 +396,4 @@ export default class CustomerHome extends React.Component {
     );
   }
 }
+export default CustomerHome;

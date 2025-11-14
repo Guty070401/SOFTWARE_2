@@ -3,18 +3,29 @@ import AuthService from "../services/AuthService.js";
 import OrderService from "../services/OrderService.js";
 import OrderStatus from "../models/OrderStatus.js";
 import Item from "../models/Item.js";
+import { api } from "../../services/api.js";
+import { getRealtimeClient } from "../../services/realtimeClient.js";
 
-class AppState {
-  constructor(){
-    if (AppState.instance) return AppState.instance;
+export class AppState {
+  constructor(options = {}){
+    const {
+      auth = new AuthService(),
+      orderSrv = new OrderService(),
+      forceNew = false,
+    } = options;
+
+    if (AppState.instance && !forceNew) return AppState.instance;
     this.listeners = new Map(); // { event: Set<fn> }
     // Estado
     this.user = null;
     this.cart = /** @type {Item[]} */([]);
     this.orders = [];
     // Servicios
-    this.auth = new AuthService();
-    this.orderSrv = new OrderService();
+    this.auth = auth;
+    this.orderSrv = orderSrv;
+    this.chatByOrder = new Map();
+    this.chatSubscribers = new Map();
+    this.chatChannels = new Map();
 
     AppState.instance = this;
   }
@@ -183,7 +194,101 @@ class AppState {
     this.emit(EVENTS.ORDERS_CHANGED, this.orders);
     return this.orders;
   }
+
+  // --- Chat ---
+  getChatMessages(orderId){
+    return this.chatByOrder.get(String(orderId)) || [];
+  }
+
+  notifyChat(orderId){
+    const listeners = this.chatSubscribers.get(String(orderId));
+    if (listeners) {
+      const snapshot = this.getChatMessages(orderId);
+      listeners.forEach((fn)=> fn(snapshot));
+    }
+    this.emit(EVENTS.CHAT_CHANGED, { orderId, messages: this.getChatMessages(orderId) });
+  }
+
+  setChat(orderId, messages){
+    this.chatByOrder.set(String(orderId), Array.isArray(messages) ? messages : []);
+    this.notifyChat(orderId);
+  }
+
+  appendChat(orderId, message){
+    if (!message) return;
+    const current = this.getChatMessages(orderId);
+    this.chatByOrder.set(String(orderId), [...current, message]);
+    this.notifyChat(orderId);
+  }
+
+  subscribeToChat(orderId, listener){
+    const key = String(orderId);
+    if (!this.chatSubscribers.has(key)) this.chatSubscribers.set(key, new Set());
+    const bag = this.chatSubscribers.get(key);
+    bag.add(listener);
+    listener(this.getChatMessages(orderId));
+    return ()=> {
+      bag.delete(listener);
+      if (bag.size === 0) this.chatSubscribers.delete(key);
+    };
+  }
+
+  async loadChat(orderId){
+    const { messages = [] } = await api.get(`/api/orders/${orderId}/chat`);
+    this.setChat(orderId, messages);
+    return messages;
+  }
+
+  async sendChatMessage(orderId, text){
+    const payload = await api.post(`/api/orders/${orderId}/chat`, { message: text });
+    if (payload?.message) this.appendChat(orderId, payload.message);
+    return payload?.message;
+  }
+
+  async ensureChatSession(orderId){
+    const key = String(orderId);
+    if (!this.chatByOrder.has(key)) {
+      try {
+        await this.loadChat(orderId);
+      } catch (err) {
+        console.error("[Chat] No se pudo cargar historial", err);
+      }
+    }
+    this.connectChatChannel(orderId);
+  }
+
+  connectChatChannel(orderId){
+    const key = String(orderId);
+    if (this.chatChannels.has(key)) return;
+    const client = getRealtimeClient();
+    if (!client) return;
+    const channel = client
+      .channel(`order-chat-${key}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orden_chat", filter: `orden_id=eq.${orderId}` },
+        (payload)=>{
+          const row = payload?.new;
+          if (row) {
+            this.appendChat(orderId, {
+              id: row.id,
+              ordenId: row.orden_id,
+              usuarioId: row.usuario_id,
+              rol: row.rol,
+              mensaje: row.mensaje,
+              createdAt: row.creado_en,
+            });
+          }
+        }
+      )
+      .subscribe();
+    this.chatChannels.set(key, channel);
+  }
 }
+
+AppState.instance = null;
+
+export const createAppState = (options = {})=> new AppState({ ...options, forceNew: true });
 
 const appState = new AppState(); // Singleton
 export default appState;

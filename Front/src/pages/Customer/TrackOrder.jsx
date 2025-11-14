@@ -9,7 +9,7 @@ function withLocation(Component){
   return (props)=> <Component {...props} location={useLocation()} />;
 }
 
-class TrackOrder extends React.Component {
+export class TrackOrder extends React.Component {
   state = { orders: [], filter: 'all', q: '', page: 1, pageSize: 10 };
 
   componentDidMount(){

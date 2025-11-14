@@ -3,12 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import appState from "../../oop/state/AppState";
 import { EVENTS } from "../../oop/state/events";
 import OrderStatus, { statusLabel } from "../../oop/models/OrderStatus";
+import OrderChatPanel from "../../components/OrderChatPanel";
 
 function withParams(Component){
   return (props)=> <Component {...props} params={useParams()} />;
 }
 
-class OrderDetail extends React.Component {
+export class OrderDetail extends React.Component {
   state = { order: null, notFound: false, modal: false };
 
   componentDidMount(){
@@ -45,15 +46,17 @@ class OrderDetail extends React.Component {
 
     const customerName = o.customerName || o.customer?.name || o.user?.name || null;
 
-    // Transición permitida: pending -> accepted -> picked -> on_route -> delivered
-    const nextStatus = (() => {
-      const s = String(o.status || '').toLowerCase();
-      if (s === OrderStatus.PENDING) return OrderStatus.ACCEPTED;
-      if (s === OrderStatus.ACCEPTED) return OrderStatus.PICKED;
-      if (s === OrderStatus.PICKED) return OrderStatus.ON_ROUTE;
-      if (s === OrderStatus.ON_ROUTE) return OrderStatus.DELIVERED;
-      return null;
-    })();
+    const statusFlow = [
+      OrderStatus.PENDING,
+      OrderStatus.ACCEPTED,
+      OrderStatus.PICKED,
+      OrderStatus.ON_ROUTE,
+      OrderStatus.CANCELED,
+      OrderStatus.DELIVERED,
+    ];
+    const currentStatusKey = String(o.status || '').toLowerCase();
+    const currentIndex = statusFlow.indexOf(currentStatusKey);
+    const nextStatus = currentIndex >= 0 ? statusFlow[currentIndex + 1] ?? null : null;
 
     return (
       <section className="grid lg:grid-cols-3 gap-6">
@@ -151,6 +154,10 @@ class OrderDetail extends React.Component {
             </div>
           </div>
         )}
+
+        <div className="lg:col-span-3">
+          <OrderChatPanel orderId={o.id} />
+        </div>
       </section>
     );
   }

@@ -11,6 +11,7 @@ module.exports = function requireAuth(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = payload.id;
     req.userRole = payload.rol || payload.role || 'customer';
+    req.userEntity = { id: req.userId, rol: req.userRole, role: req.userRole };
     next();
   } catch (e) {
     return res.status(401).json({ message: e.message || 'Unauthorized' });

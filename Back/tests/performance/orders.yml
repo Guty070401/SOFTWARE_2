@@ -1,0 +1,28 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 30
+      name: "Spike checkout"
+  payload:
+    path: "./orders.csv"
+    fields:
+      - "storeId"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - name: "Anonymous hits checkout endpoints"
+    flow:
+      - post:
+          url: "/api/orders"
+          json:
+            storeId: "{{ storeId }}"
+            items:
+              - productoId: 1
+                cantidad: 1
+                precioUnitario: 10
