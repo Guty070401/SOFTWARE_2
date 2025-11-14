@@ -8,7 +8,12 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "lint": "eslint .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test": "npm run test:unit",
+    "test:unit": "cross-env NODE_ENV=test jest --selectProjects unit --runInBand --coverage && node scripts/print-coverage.js",
+    "test:integration": "cross-env NODE_ENV=test jest --selectProjects integration --runInBand --coverage && node scripts/print-coverage.js",
+    "test:functional": "cross-env NODE_ENV=test jest --selectProjects functional --runInBand",
+    "test:perf": "artillery run tests/performance/orders.yml"
   },
   "keywords": [
     "node",
@@ -35,13 +40,18 @@
     "sequelize": "^6.37.3"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.1.0",
+    "artillery": "^2.0.17",
+    "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
+    "jest": "^29.7.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
+    "supertest": "^7.1.0",
     "nodemon": "^3.1.7"
   },
   "lint-staged": {

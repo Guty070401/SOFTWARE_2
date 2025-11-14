@@ -6,7 +6,16 @@ const { supabase } = require('./data/database');
 
 const app = express();
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
+const corsEnv = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const allowedOrigins = corsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  }
+}));
 app.use(express.json());
 
 // 🔎 Logger simple de requests/responses
@@ -33,6 +42,24 @@ app.get('/debug/db', async (_req, res) => {
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// Error handler en formato JSON para que el front reciba mensajes legibles
+app.use((err, _req, res, next) => {
+  console.error('[ERR]', err);
+  if (res.headersSent) return next(err);
+  const status = err.status || err.statusCode || 500;
+  const message =
+    err.message ||
+    err.error?.message ||
+    err.error_description ||
+    'Error';
+  const payload = { message };
+  if (process.env.NODE_ENV !== 'production') {
+    const details = err.details || err.detail;
+    if (details) payload.details = details;
+  }
+  res.status(status).json(payload);
 });
 
 module.exports = app;

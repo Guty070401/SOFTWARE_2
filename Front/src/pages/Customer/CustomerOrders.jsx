@@ -3,17 +3,46 @@ import appState from "../../oop/state/AppState";
 import { EVENTS } from "../../oop/state/events";
 import withNavigate from "../../oop/router/withNavigate";
 
-class CustomerOrders extends React.Component {
-  state = { orders: [] };
+export class CustomerOrders extends React.Component {
+  state = { orders: [], loading: true, error: "" };
 
   componentDidMount() {
-    this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders) =>
-      this.setState({ orders })
-    );
-    this.setState({ orders: appState.orders });
+    this._isMounted = true;
+    this.unsub = appState.on(EVENTS.ORDERS_CHANGED, (orders) => {
+      if (!this._isMounted) return;
+      this.setState({ orders, loading: false });
+    });
+
+    const hasSnapshot = Array.isArray(appState.orders);
+    const initialOrders = hasSnapshot ? appState.orders : [];
+    this.setState({ orders: initialOrders, loading: !hasSnapshot, error: "" });
+
+    if (typeof appState.fetchOrders === "function") {
+      Promise.resolve()
+        .then(() => appState.fetchOrders())
+        .then((maybeOrders) => {
+          if (!this._isMounted) return;
+          if (Array.isArray(maybeOrders)) {
+            this.setState((prev) =>
+              prev.orders.length ? null : { orders: maybeOrders }
+            );
+          }
+        })
+        .catch((err) => {
+          if (!this._isMounted) return;
+          this.setState({
+            error: err?.message || "No se pudieron cargar los pedidos",
+          });
+        })
+        .finally(() => {
+          if (!this._isMounted) return;
+          this.setState({ loading: false });
+        });
+    }
   }
 
   componentWillUnmount() {
+    this._isMounted = false;
     this.unsub && this.unsub();
   }
 
@@ -26,14 +55,19 @@ class CustomerOrders extends React.Component {
   }
 
   render() {
-    const { orders } = this.state;
+    const { orders, loading, error } = this.state;
 
     return (
       <section>
         <h1 className="text-2xl font-semibold mb-4">Pedidos Realizados</h1>
 
-        {!orders.length ? (
+        {loading ? (
           <div className="card text-center">
+            <p className="text-slate-500">Cargando pedidos...</p>
+          </div>
+        ) : !orders.length ? (
+          <div className="card text-center">
+            {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
             <p className="text-slate-500 mb-4">
               Aún no has realizado ningún pedido.
             </p>
@@ -72,7 +106,6 @@ class CustomerOrders extends React.Component {
               ))}
             </div>
 
-            {/* Botón de volver a tienda debajo de los pedidos */}
             <div className="flex justify-center mt-8">
               <button
                 onClick={() => this.volverATienda()}

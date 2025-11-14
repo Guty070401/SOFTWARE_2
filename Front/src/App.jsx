@@ -5,7 +5,7 @@ import { EVENTS } from "./oop/state/events.js";
 if (typeof window !== "undefined") {
   window.appState = appState;
 }
-function HeaderBar({ user, onLogout }) {
+export function HeaderBar({ user, onLogout }) {
   const { pathname } = useLocation();
 
   // Ocultar Login/Registro en "/", "/login" y "/register"
