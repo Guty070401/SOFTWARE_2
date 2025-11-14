@@ -2,6 +2,7 @@ import React from "react";
 import { Link, Navigate } from "react-router-dom";
 import appState from "../oop/state/AppState.js";
 import { EVENTS } from "../oop/state/events.js";
+import mascotaImg from "../assets/images/mascota.jpg"; // 👈 tu imagen
 
 export class Login extends React.Component {
   state = { email: "", pass: "", logged: false, error: "" };
@@ -31,6 +32,7 @@ export class Login extends React.Component {
 
     return (
       <section className="grid md:grid-cols-2 gap-6 items-center">
+        {/* Columna izquierda: formulario */}
         <div className="card">
           <h1 className="text-2xl font-semibold mb-2">Ingresar</h1>
           <form onSubmit={(e) => this.onSubmit(e)} className="space-y-4">
@@ -68,14 +70,22 @@ export class Login extends React.Component {
             </Link>
           </p>
         </div>
+
+        {/* Columna derecha: texto + imagen */}
         <div className="hidden md:block">
-          <div className="card h-full flex items-center justify-center">
-            <div className="text-center">
+          <div className="card h-full flex flex-col items-center justify-center text-center gap-6">
+            <div>
               <h2 className="text-3xl font-bold">Bienvenido a UFOOD</h2>
               <p className="text-slate-500 mt-2">
                 Pide, sigue tu pedido y recibe en minutos.
               </p>
             </div>
+
+            <img
+              src={mascotaImg}
+              alt="Repartidor UFOOD"
+              className="w-56 md:w-64 max-w-full object-contain mx-auto"
+            />
           </div>
         </div>
       </section>
