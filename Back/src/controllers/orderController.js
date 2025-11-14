@@ -64,8 +64,6 @@ exports.createOrder = async (req, res, next) => {
       tarjetaId: req.body.tarjetaId ?? req.body.cardId ?? null,
       direccionEntrega: req.body.direccion ?? req.body.direccionEntrega ?? req.body.address ?? null,
       comentarios: req.body.comentarios ?? req.body.notes ?? null,
-      // Hora de creación (por si el servicio/DB lo usa)
-      hora: new Date().toISOString(),
     };
 
     const order = await orderService.createOrder(payload);

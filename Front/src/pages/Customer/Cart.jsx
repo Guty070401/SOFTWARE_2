@@ -3,7 +3,7 @@ import appState from "../../oop/state/AppState";
 import { EVENTS } from "../../oop/state/events";
 import withNavigate from "../../oop/router/withNavigate";
 
-class Cart extends React.Component {
+export class Cart extends React.Component {
   state = { cart: [] };
 
   componentDidMount() {

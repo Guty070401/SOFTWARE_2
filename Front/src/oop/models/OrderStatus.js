@@ -9,12 +9,18 @@ const OrderStatus = Object.freeze({
 
 export function statusLabel(status){
   const map = {
-    pending: 'Pendiente',
-    accepted: 'Aceptado',
-    picked: 'Recogido',
-    on_route: 'En camino',
-    delivered: 'Entregado',
-    canceled: 'Cancelado',
+    pending: "Pendiente",
+    pendiente: "Pendiente",
+    accepted: "Aceptado",
+    aceptado: "Aceptado",
+    picked: "Recogido",
+    recogido: "Recogido",
+    on_route: "En camino",
+    en_camino: "En camino",
+    delivered: "Entregado",
+    entregado: "Entregado",
+    canceled: "Cancelado",
+    cancelado: "Cancelado",
   };
   const key = String(status || '').toLowerCase().replace(/\s+/g, '_');
   return map[key] || status || '';
