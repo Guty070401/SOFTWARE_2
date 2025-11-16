@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom"; // ⬅️ IMPORTANTE
 import appState from "../oop/state/AppState";
 import { EVENTS } from "../oop/state/events";
 import withNavigate from "../oop/router/withNavigate";
@@ -63,6 +64,7 @@ export class Register extends React.Component {
                 required
               />
             </div>
+
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Correo</label>
@@ -84,6 +86,7 @@ export class Register extends React.Component {
                 />
               </div>
             </div>
+
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Contraseña</label>
@@ -108,12 +111,23 @@ export class Register extends React.Component {
                 />
               </div>
             </div>
+
             {this.state.error && (
               <p className="text-sm text-red-600">{this.state.error}</p>
             )}
+
+            {/* Botón de registro */}
             <button className="btn btn-primary" disabled={this.state.loading}>
               {this.state.loading ? "Creando..." : "Registrarme"}
             </button>
+
+            {/* 🔹 Nuevo botón para regresar al login */}
+            <Link
+              to="/login"
+              className="btn w-full border border-slate-300 hover:bg-slate-100 text-slate-700"
+            >
+              Volver al Login
+            </Link>
           </form>
         </div>
       </section>
