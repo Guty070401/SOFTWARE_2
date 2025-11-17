@@ -25,7 +25,7 @@ router.patch('/:id', requireAdmin, withCatch(async (req, res) => {
   const store = await storeService.updateStore(req.params.id, req.body);
   res.json({ store });
 }));
-router.delete('/:id', requireAdmin, withCatch(async (req, res) => {
+router.delete('/:id', withCatch(async (req, res) => {
   await storeService.deleteStore(req.params.id);
   res.status(204).end();
 }));
@@ -43,7 +43,7 @@ router.patch('/products/:productId', requireAdmin, withCatch(async (req, res) =>
   const product = await storeService.updateProduct(req.params.productId, req.body);
   res.json({ product });
 }));
-router.delete('/products/:productId', requireAdmin, withCatch(async (req, res) => {
+router.delete('/products/:productId', withCatch(async (req, res) => {
   await storeService.deleteProduct(req.params.productId);
   res.status(204).end();
 }));

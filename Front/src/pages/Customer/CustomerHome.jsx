@@ -240,12 +240,22 @@ export class CustomerHome extends React.Component {
     }
   };
 
-  removeProductFromStore = (storeId, itemId) => {
+  removeProductFromStore = async (storeId, itemId) => {
     if (!confirm("Â¿Eliminar este producto del catÃ¡logo?")) return;
+
+    const backendProductId = PRODUCT_ID_MAP[itemId] || itemId;
+
+    try {
+      await StoresApi.removeProduct(backendProductId);
+    } catch (error) {
+      console.error("No se pudo eliminar el producto en BD", error);
+      alert("No se pudo eliminar el producto en el servidor. Intenta de nuevo.");
+      return;
+    }
 
     const next = this.state.stores.map(s => {
       if (s.id === storeId) {
-        const items = (s.items || []).filter(it => it.id !== itemId);
+        const items = (s.items || []).filter(it => it.id !== itemId && it.id !== backendProductId);
         return { ...s, items };
       }
       return s;
@@ -284,10 +294,20 @@ export class CustomerHome extends React.Component {
     this.setState({ selectedStoreId: backendId, filterStoreId: "all" });
   };
 
-  removeStore = (storeId) => {
+  removeStore = async (storeId) => {
     if (!confirm("Â¿Eliminar esta tienda y todos sus productos?")) return;
 
-    const next = this.state.stores.filter((s) => s.id !== storeId);
+    const backendStoreId = STORE_ID_MAP[storeId] || storeId;
+
+    try {
+      await StoresApi.remove(backendStoreId);
+    } catch (error) {
+      console.error("No se pudo eliminar la tienda en BD", error);
+      alert("No se pudo eliminar la tienda en el servidor. Intenta de nuevo.");
+      return;
+    }
+
+    const next = this.state.stores.filter((s) => s.id !== storeId && s.id !== backendStoreId);
     this.saveStores(next);
 
     const patch = {};
