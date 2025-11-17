@@ -67,7 +67,7 @@ async function seedData() {
 
   const courier = await Usuario.createWithPassword({
     nombreUsuario: 'Courier UFOOD',
-    correo: 'courier@ufood.com',
+    correo: '00000001@aloe.ulima.edu.pe',
     password: '123456',
     rol: 'courier',
     celular: '999999999'
@@ -76,7 +76,7 @@ async function seedData() {
 
   const customer = await Usuario.createWithPassword({
     nombreUsuario: 'Cliente Demo',
-    correo: 'cliente@ufood.com',
+    correo: '00000002@aloe.ulima.edu.pe',
     password: '123456',
     rol: 'customer',
     celular: '988888888'
