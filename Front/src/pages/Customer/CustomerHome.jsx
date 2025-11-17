@@ -1,11 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import appState from "../../oop/state/AppState";            // ✅ ruta correcta
+import appState from "../../oop/state/AppState";            // âœ… ruta correcta
 import Item from "../../oop/models/Item";
 import { EVENTS } from "../../oop/state/events";
 
-import { syncCatalog } from "../../services/catalog";       // ✅ NEW
+import { syncCatalog } from "../../services/catalog";       // âœ… NEW
 // import { api } from "../../services/api";                // si luego quieres leer del back
 
 import imgBembosLogo from '../../assets/images/bembos-logo.png';
@@ -34,18 +34,18 @@ class Store {
   addItem(item) { this.items.push(item); }
 }
 
-// Catálogo “de fábrica”
-const storeBembos = new Store("s1", "Bembos", "Las hamburguesas más bravas", imgBembosLogo);
-storeBembos.addItem(new Item("p1", "Nuggets", 18, "¡Prueba nuestros deliciosos Nuggets de pollo!", imgBembosNuggets));
+// CatÃ¡logo â€œde fÃ¡bricaâ€
+const storeBembos = new Store("s1", "Bembos", "Las hamburguesas mÃ¡s bravas", imgBembosLogo);
+storeBembos.addItem(new Item("p1", "Nuggets", 18, "Â¡Prueba nuestros deliciosos Nuggets de pollo!", imgBembosNuggets));
 storeBembos.addItem(new Item("p2", "Hamburguesa Extrema", 20.90, "Doble carne, queso Edam, tocino, tomate, lechuga y mayonesa.", imgBembosExtrema));
 
 const storeLaNevera = new Store("s2", "La Nevera Fit", "Tus desayunos siempre ganan", imgNeveraLogo);
-storeLaNevera.addItem(new Item("p3", "Açai Bowl", 25, "Con granola, plátano, fresas y arándanos.", imgNeveraAcai));
+storeLaNevera.addItem(new Item("p3", "AÃ§ai Bowl", 25, "Con granola, plÃ¡tano, fresas y arÃ¡ndanos.", imgNeveraAcai));
 storeLaNevera.addItem(new Item("p4", "Tostadas con Palta", 15, "Dos tostadas de pan integral con palta y semillas.", imgNeveraTostadas));
 
 const storeMrSushi = new Store("s3", "Mr. Sushi", "Cada maki es un bocado de pura felicidad", imgSushiLogo);
-storeMrSushi.addItem(new Item("p5", "Acevichado Maki", 28, "Roll de langostino empanizado y palta, cubierto con láminas de pescado blanco.", imgSushiAcevichado));
-storeMrSushi.addItem(new Item("p6", "Poke Atún Fresco", 29.90, "Base de arroz sushi, salsa de ostión, col morada, zanahoria y cubos de Atún.", imgSushiPoke));
+storeMrSushi.addItem(new Item("p5", "Acevichado Maki", 28, "Roll de langostino empanizado y palta, cubierto con lÃ¡minas de pescado blanco.", imgSushiAcevichado));
+storeMrSushi.addItem(new Item("p6", "Poke AtÃºn Fresco", 29.90, "Base de arroz sushi, salsa de ostiÃ³n, col morada, zanahoria y cubos de AtÃºn.", imgSushiPoke));
 
 const DEFAULT_STORES = [storeBembos, storeLaNevera, storeMrSushi];
 const LS_KEY = "catalog_stores";
@@ -74,17 +74,17 @@ export class CustomerHome extends React.Component {
     cartCount: 0,
     selectedStoreId: null,   // abrir/cerrar productos de una tienda
     filterStoreId: "all",    // filtro por establecimiento
-    stores: []               // catálogo editable (persistido en localStorage)
+    stores: []               // catÃ¡logo editable (persistido en localStorage)
   };
 
   componentDidMount() {
-    // Suscripción al carrito
+    // SuscripciÃ³n al carrito
     this.unsub = appState.on(EVENTS.CART_CHANGED, (cartItems) => {
       this.setState({ cartCount: cartItems.length });
     });
     this.setState({ cartCount: appState.cart.length });
 
-    // Cargar catálogo: localStorage > default
+    // Cargar catÃ¡logo: localStorage > default
     const saved = localStorage.getItem(LS_KEY);
     if (saved) {
       try {
@@ -103,49 +103,43 @@ export class CustomerHome extends React.Component {
     this.unsub && this.unsub();
   }
 
-  // Guardar catálogo y refrescar UI
-  saveStores = (stores) => {
-    localStorage.setItem(LS_KEY, JSON.stringify(stores));
-    this.setState({ stores });
-  };
-
   ensureCatalogSynced = async () => {
     if (localStorage.getItem("catalog_synced")) return;
     try {
       await syncCatalog();
       localStorage.setItem("catalog_synced", "1");
-      console.log("[catalog] sincronizado autom�ticamente");
+      console.log("[catalog] sincronizado automáticamente");
     } catch (error) {
-      console.warn("[catalog] no se pudo sincronizar autom�ticamente", error);
+      console.warn("[catalog] no se pudo sincronizar automáticamente", error);
     }
   };
 
-  // ====== NEW: sincronizar catálogo al backend/Supabase ======
+  // ====== NEW: sincronizar catÃ¡logo al backend/Supabase ======
   onSyncCatalog = async () => {
     try {
       const resp = await syncCatalog();
       console.log("[sync] ok =>", resp);
-      alert("Catálogo sincronizado en Supabase");
-      // Si más adelante listamos desde el backend, aquí haríamos un refetch
+      alert("CatÃ¡logo sincronizado en Supabase");
+      // Si mÃ¡s adelante listamos desde el backend, aquÃ­ harÃ­amos un refetch
     } catch (e) {
       console.error(e);
-      alert("Error sincronizando catálogo: " + (e?.message || ""));
+      alert("Error sincronizando catÃ¡logo: " + (e?.message || ""));
     }
   };
 
-  // Añadir al carrito (usando IDs reales para que el checkout no rompa)
+  // AÃ±adir al carrito (usando IDs reales para que el checkout no rompa)
   addToCart = (item, store) => {
     const backendProductId = PRODUCT_ID_MAP[item.id] || item.id;   // traduce p1..p6
     const backendStoreId   = STORE_ID_MAP[store.id] || store.id;   // traduce s1..s3
 
     const itemForCart = {
-      id: backendProductId,         // ✅ coincide con productos.id en Supabase
+      id: backendProductId,         // âœ… coincide con productos.id en Supabase
       name: item.name,
       price: Number(item.price),
       desc: item.desc,
       image: item.image,
       qty: 1,
-      storeId: backendStoreId       // ✅ coincide con tiendas.id
+      storeId: backendStoreId       // âœ… coincide con tiendas.id
     };
 
     appState.addToCart(itemForCart);
@@ -167,14 +161,14 @@ export class CustomerHome extends React.Component {
 
     const priceStr = prompt("Precio (por ejemplo, 25.90):", "0");
     const price = Number(priceStr);
-    if (Number.isNaN(price)) return alert("Precio inválido.");
+    if (Number.isNaN(price)) return alert("Precio invÃ¡lido.");
 
-    const desc = prompt("Descripción corta:", "") || "";
-    const image = prompt("URL de imagen (opcional). Si está vacío, se usará un placeholder:", "") ||
+    const desc = prompt("DescripciÃ³n corta:", "") || "";
+    const image = prompt("URL de imagen (opcional). Si estÃ¡ vacÃ­o, se usarÃ¡ un placeholder:", "") ||
       "https://via.placeholder.com/640x400?text=Producto";
 
     const newItem = {
-      id: `p_${Date.now()}`, // ✅ backticks (antes faltaban)
+      id: `p_${Date.now()}`, // âœ… backticks (antes faltaban)
       name,
       price,
       desc,
@@ -196,7 +190,7 @@ export class CustomerHome extends React.Component {
   };
 
   removeProductFromStore = (storeId, itemId) => {
-    if (!confirm("¿Eliminar este producto del catálogo?")) return;
+    if (!confirm("Â¿Eliminar este producto del catÃ¡logo?")) return;
 
     const next = this.state.stores.map(s => {
       if (s.id === storeId) {
@@ -216,7 +210,7 @@ export class CustomerHome extends React.Component {
     const name = prompt("Nombre de la tienda:");
     if (!name) return;
 
-    const desc = prompt("Descripción corta:", "") || "";
+    const desc = prompt("DescripciÃ³n corta:", "") || "";
     const image =
       prompt("URL de logo/imagen (opcional):", "") ||
       "https://via.placeholder.com/160x160?text=Tienda";
@@ -231,7 +225,7 @@ export class CustomerHome extends React.Component {
   };
 
   removeStore = (storeId) => {
-    if (!confirm("¿Eliminar esta tienda y todos sus productos?")) return;
+    if (!confirm("Â¿Eliminar esta tienda y todos sus productos?")) return;
 
     const next = this.state.stores.filter((s) => s.id !== storeId);
     this.saveStores(next);
@@ -242,9 +236,9 @@ export class CustomerHome extends React.Component {
     if (Object.keys(patch).length) this.setState(patch);
   };
 
-  // Restablecer catálogo de fábrica (solo local)
+  // Restablecer catÃ¡logo de fÃ¡brica (solo local)
   resetCatalog = () => {
-    if (!confirm("¿Restablecer catálogo a los valores originales?")) return;
+    if (!confirm("Â¿Restablecer catÃ¡logo a los valores originales?")) return;
     localStorage.removeItem(LS_KEY);
     this.setState({ stores: DEFAULT_STORES, selectedStoreId: null, filterStoreId: "all" });
   };
@@ -267,12 +261,12 @@ export class CustomerHome extends React.Component {
           </div>
           <div className="flex items-center gap-2">
             <button className="pill" onClick={this.addStore}>+ Agregar tienda</button>
-            <button className="pill" onClick={this.resetCatalog} title="Restablecer catálogo">
-              Reset catálogo (local)
+            <button className="pill" onClick={this.resetCatalog} title="Restablecer catÃ¡logo">
+              Reset catÃ¡logo (local)
             </button>
-            {/* ✅ NEW: sincroniza con Supabase vía backend */}
+            {/* âœ… NEW: sincroniza con Supabase vÃ­a backend */}
             <button className="pill" onClick={this.onSyncCatalog} title="Upsert en Supabase">
-              Sincronizar catálogo
+              Sincronizar catÃ¡logo
             </button>
             <Link to="/customer/cart" className="pill">
               Carrito ({this.state.cartCount})
@@ -366,14 +360,14 @@ export class CustomerHome extends React.Component {
                             <div className="flex gap-2">
                               <button
                                 className="btn btn-secondary"
-                                onClick={() => this.addToCart(it, store)}   // ✅ usa mapeo a IDs reales
+                                onClick={() => this.addToCart(it, store)}   // âœ… usa mapeo a IDs reales
                               >
                                 Agregar
                               </button>
                               <button
                                 className="btn btn-danger"
                                 onClick={() => this.removeProductFromStore(store.id, it.id)}
-                                title="Eliminar del catálogo"
+                                title="Eliminar del catÃ¡logo"
                               >
                                 Eliminar
                               </button>
