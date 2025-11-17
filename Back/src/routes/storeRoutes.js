@@ -8,8 +8,8 @@ router.get('/', async (_req, res) => {
   res.json({ stores });
 });
 
-// CRUD tiendas (admin)
-router.post('/', requireAdmin, async (req, res) => {
+// CRUD tiendas (crear libre para la UI actual)
+router.post('/', async (req, res) => {
   const store = await storeService.createStore(req.body);
   res.status(201).json({ store });
 });
@@ -27,7 +27,7 @@ router.get('/:id/products', async (req, res) => {
   const products = await storeService.listProductsByStore(req.params.id);
   res.json({ products });
 });
-router.post('/:id/products', requireAdmin, async (req, res) => {
+router.post('/:id/products', async (req, res) => {
   const product = await storeService.createProduct({ ...req.body, tiendaId: req.params.id });
   res.status(201).json({ product });
 });
