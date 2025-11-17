@@ -14,23 +14,19 @@ export function HeaderBar({ user, onLogout }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Ocultar Login/Registro en "/", "/login" y "/register"
   const hideAuthButtons =
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register");
 
-  // ⛔ Ocultar el menú de usuario en la pantalla de elección de rol
   const hideUserMenu = pathname.startsWith("/choose-role");
 
-  // Letra según rol (C = customer, R = courier, fallback a inicial)
   const role = appState.user?.role;
   const roleLetter =
     role === "customer" ? "C" :
     role === "courier"  ? "R" :
     (appState.user?.name?.[0] || "U").toUpperCase();
 
-  // Cerrar el menú al click fuera o al presionar ESC
   useEffect(() => {
     function handleClickOutside(e) {
       if (!menuRef.current) return;
@@ -52,7 +48,6 @@ export function HeaderBar({ user, onLogout }) {
           UFOOD
         </span>
 
-        {/* Invitado: solo en rutas que no son login/register */}
         {!user && !hideAuthButtons && (
           <nav className="flex gap-2 ml-auto">
             <Link className="pill" to="/login">Login</Link>
@@ -60,10 +55,9 @@ export function HeaderBar({ user, onLogout }) {
           </nav>
         )}
 
-        {/* Usuario logueado: menú solo si NO estamos en /choose-role */}
         {user && !hideUserMenu && (
           <div className="flex gap-2 ml-auto items-center" ref={menuRef}>
-            {/* Botón redondo con letra del rol */}
+
             <button
               type="button"
               aria-haspopup="menu"
@@ -114,7 +108,6 @@ export function HeaderBar({ user, onLogout }) {
     </header>
   );
 }
-/* ============================================ */
 
 export default class App extends React.Component {
   state = { user: null };
@@ -132,7 +125,7 @@ export default class App extends React.Component {
 
   logout() {
     appState.logout && appState.logout();
-    window.location.href = "/"; // redirige al login
+    window.location.href = "/";
   }
 
   render() {
