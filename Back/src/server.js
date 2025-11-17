@@ -2,7 +2,8 @@
 const app = require('./app');
 const seedData = require('./seed/seedData');
 
-const PORT = Number(process.env.PORT) || 3000;
+// Usa 4000 por defecto para alinearse con el frontend (Vite apunta a 4000)
+const PORT = Number(process.env.PORT) || 4000;
 
 async function start() {
   await seedData();
