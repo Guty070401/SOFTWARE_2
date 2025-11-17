@@ -71,6 +71,10 @@ async function updateStore(id, { nombre, logo }) {
 }
 
 async function deleteStore(id) {
+  // Borra primero los productos para evitar errores de clave foránea
+  const { error: productError } = await supabase.from('productos').delete().eq('tienda_id', id);
+  if (productError) throw productError;
+
   const { error } = await supabase.from('tiendas').delete().eq('id', id);
   if (error) throw error;
 }
