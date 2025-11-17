@@ -1,10 +1,9 @@
 const router = require('express').Router();
-const requireAuth = require('../middlewares/requireAuth');
 const { supabase } = require('../data/database');
 
 const num = (v, d = 0) => (v == null ? d : Number(v));
 
-router.post('/sync', requireAuth, async (req, res) => {
+router.post('/sync', async (req, res) => {
   try {
     const { catalog = [] } = req.body || {};
     if (!Array.isArray(catalog) || !catalog.length) {
