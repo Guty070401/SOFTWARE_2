@@ -13,7 +13,6 @@ function Header({ user }) {
 
   return (
     <header className="flex justify-between items-center px-6 py-3 bg-white text-slate-900 border-b">
-      {/* Logo ya NO es clickeable */}
       <span className="text-2xl font-extrabold text-indigo-600 select-none cursor-default">
         UFOOD
       </span>
