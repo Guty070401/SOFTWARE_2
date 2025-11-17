@@ -103,12 +103,6 @@ export class CustomerHome extends React.Component {
     this.unsub && this.unsub();
   }
 
-      console.log("[catalog] sincronizado automáticamente");
-      console.warn("[catalog] no se pudo sincronizar automáticamente", error);
-    localStorage.setItem(LS_KEY, JSON.stringify(stores));
-    this.setState({ stores });
-  };
-
   ensureCatalogSynced = async () => {
     if (localStorage.getItem("catalog_synced")) return;
     try {
