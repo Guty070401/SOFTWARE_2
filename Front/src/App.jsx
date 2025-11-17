@@ -48,9 +48,9 @@ export function HeaderBar({ user, onLogout }) {
   return (
     <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
       <div className="relative mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
-        <Link to="/" className="text-xl font-bold text-indigo-600">
+        <span className="text-xl font-bold text-indigo-600 select-none cursor-default">
           UFOOD
-        </Link>
+        </span>
 
         {/* Invitado: solo en rutas que no son login/register */}
         {!user && !hideAuthButtons && (
