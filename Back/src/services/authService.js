@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { supabase } = require('../data/database');
 const Usuario = require('../models/Usuario');
 
@@ -40,10 +41,10 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
     throw err;
   }
 
-  const temp = new Usuario({
+  const temp = await Usuario.createWithPassword({
     nombreUsuario: nombre,
     correo,
-    passwordHash: password, // si usas bcrypt, hashea aquí
+    password,
     celular,
     rol
   });
@@ -76,8 +77,8 @@ async function login({ correo, password }) {
     err.status = 401;
     throw err;
   }
-  // si usas hash real, compara aquí (bcrypt)
-  if (password !== user.password_hash) {
+  const matches = await bcrypt.compare(password, user.password_hash).catch(() => false);
+  if (!matches && password !== user.password_hash) {
     const err = new Error('Credenciales inválidas');
     err.status = 401;
     throw err;
