@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
-const { ALOE_EMAIL_REGEX } = require('../constants/user');
+const { ALOE_EMAIL_REGEX, NAME_REGEX, PHONE_REGEX, PASSWORD_REGEX } = require('../constants/user');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '1h';
@@ -31,6 +31,24 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
     throw error;
   }
 
+  if (!NAME_REGEX.test(nombre.trim())) {
+    const error = new Error('El nombre debe tener entre 2 y 60 caracteres alfabéticos');
+    error.status = 400;
+    throw error;
+  }
+
+  if (!celular || !PHONE_REGEX.test(celular)) {
+    const error = new Error('El teléfono debe tener 9 dígitos y empezar en 9');
+    error.status = 400;
+    throw error;
+  }
+
+  if (!PASSWORD_REGEX.test(password)) {
+    const error = new Error('La contraseña debe tener entre 8 y 20 caracteres, con mayúsculas, números y símbolos');
+    error.status = 400;
+    throw error;
+  }
+
   const normalizedCorreo = String(correo).toLowerCase();
   if (!ALOE_EMAIL_REGEX.test(normalizedCorreo)) {
     const error = new Error('El correo debe seguir el formato 8 dígitos + @aloe.ulima.edu.pe');
@@ -46,7 +64,7 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
   }
 
   const usuario = await Usuario.createWithPassword({
-    nombreUsuario: nombre,
+    nombreUsuario: nombre.trim(),
     correo: normalizedCorreo,
     password,
     celular,
