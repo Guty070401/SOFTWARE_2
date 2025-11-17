@@ -7,6 +7,7 @@ import { EVENTS } from "../../oop/state/events";
 
 import { syncCatalog } from "../../services/catalog";       // âœ… NEW
 // import { api } from "../../services/api";                // si luego quieres leer del back
+import { StoresApi } from "../../services/storeService";
 
 import imgBembosLogo from '../../assets/images/bembos-logo.png';
 import imgBembosNuggets from '../../assets/images/nuggets.jpg';
@@ -69,6 +70,14 @@ const PRODUCT_ID_MAP = {
   p6: "mrsushi_poke",
 };
 
+const slugify = (text) =>
+  text
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+
 export class CustomerHome extends React.Component {
   state = {
     cartCount: 0,
@@ -96,6 +105,7 @@ export class CustomerHome extends React.Component {
     } else {
       this.setState({ stores: DEFAULT_STORES });
     }
+    this.loadStoresFromBackend();
     this.ensureCatalogSynced();
   }
 
@@ -112,6 +122,36 @@ export class CustomerHome extends React.Component {
     } catch (error) {
       console.warn("[catalog] no se pudo sincronizar automáticamente", error);
     }
+  };
+
+  loadStoresFromBackend = async () => {
+    try {
+      const { stores } = await StoresApi.list();
+      const mapped = (stores || []).map((store) => ({
+        id: store.id,
+        name: store.nombre || store.nombre_origen || store.name || "",
+        desc: store.descripcion || store.desc || "",
+        image: store.logo || "https://via.placeholder.com/160x160?text=Tienda",
+        items: (store.productos || store.items || []).map((p) => ({
+          id: p.id,
+          name: p.nombre || p.name,
+          desc: p.descripcion || p.desc || "",
+          price: Number(p.precio ?? p.price ?? 0),
+          image: p.foto || p.image || "https://via.placeholder.com/640x400?text=Producto",
+        })),
+      }));
+
+      if (mapped.length) {
+        this.saveStores(mapped);
+      }
+    } catch (error) {
+      console.error("No se pudieron cargar las tiendas desde el backend", error);
+    }
+  };
+
+  saveStores = (stores) => {
+    this.setState({ stores });
+    localStorage.setItem(LS_KEY, JSON.stringify(stores));
   };
 
   // ====== NEW: sincronizar catÃ¡logo al backend/Supabase ======
@@ -155,7 +195,7 @@ export class CustomerHome extends React.Component {
   // -------------------------
   // CRUD de productos (Front)
   // -------------------------
-  addProductToStore = (storeId) => {
+  addProductToStore = async (storeId) => {
     const name = prompt("Nombre del producto:");
     if (!name) return;
 
@@ -167,13 +207,24 @@ export class CustomerHome extends React.Component {
     const image = prompt("URL de imagen (opcional). Si estÃ¡ vacÃ­o, se usarÃ¡ un placeholder:", "") ||
       "https://via.placeholder.com/640x400?text=Producto";
 
-    const newItem = {
-      id: `p_${Date.now()}`, // âœ… backticks (antes faltaban)
-      name,
-      price,
-      desc,
-      image
-    };
+    const backendStoreId = STORE_ID_MAP[storeId] || storeId;
+    const newItemId = `${backendStoreId}_${slugify(name) || Date.now()}`;
+
+    try {
+      await StoresApi.createProduct(backendStoreId, {
+        id: newItemId,
+        nombre: name,
+        descripcion: desc,
+        precio: price,
+        foto: image
+      });
+    } catch (error) {
+      console.error("No se pudo guardar el producto en BD", error);
+      alert("No se pudo guardar el producto en el servidor. Intenta de nuevo.");
+      return;
+    }
+
+    const newItem = { id: newItemId, name, price, desc, image };
 
     const next = this.state.stores.map(s => {
       if (s.id === storeId) {
@@ -189,12 +240,22 @@ export class CustomerHome extends React.Component {
     }
   };
 
-  removeProductFromStore = (storeId, itemId) => {
+  removeProductFromStore = async (storeId, itemId) => {
     if (!confirm("Â¿Eliminar este producto del catÃ¡logo?")) return;
+
+    const backendProductId = PRODUCT_ID_MAP[itemId] || itemId;
+
+    try {
+      await StoresApi.removeProduct(backendProductId);
+    } catch (error) {
+      console.error("No se pudo eliminar el producto en BD", error);
+      alert("No se pudo eliminar el producto en el servidor. Intenta de nuevo.");
+      return;
+    }
 
     const next = this.state.stores.map(s => {
       if (s.id === storeId) {
-        const items = (s.items || []).filter(it => it.id !== itemId);
+        const items = (s.items || []).filter(it => it.id !== itemId && it.id !== backendProductId);
         return { ...s, items };
       }
       return s;
@@ -206,7 +267,7 @@ export class CustomerHome extends React.Component {
   // -------------------------
   // CRUD de tiendas (Front)
   // -------------------------
-  addStore = () => {
+  addStore = async () => {
     const name = prompt("Nombre de la tienda:");
     if (!name) return;
 
@@ -215,19 +276,38 @@ export class CustomerHome extends React.Component {
       prompt("URL de logo/imagen (opcional):", "") ||
       "https://via.placeholder.com/160x160?text=Tienda";
 
-    const id = `s_${Date.now()}`;
-    const newStore = { id, name, desc, image, items: [] };
+    const backendId = slugify(name) || `store_${Date.now()}`;
+
+    try {
+      await StoresApi.create({ id: backendId, nombre: name, logo: image });
+    } catch (error) {
+      console.error("No se pudo guardar la tienda en BD", error);
+      alert("No se pudo guardar la tienda en el servidor. Intenta de nuevo.");
+      return;
+    }
+
+    const newStore = { id: backendId, name, desc, image, items: [] };
 
     const next = [...this.state.stores, newStore];
     this.saveStores(next);
     // Abrimos la nueva tienda para que agregues productos
-    this.setState({ selectedStoreId: id, filterStoreId: "all" });
+    this.setState({ selectedStoreId: backendId, filterStoreId: "all" });
   };
 
-  removeStore = (storeId) => {
+  removeStore = async (storeId) => {
     if (!confirm("Â¿Eliminar esta tienda y todos sus productos?")) return;
 
-    const next = this.state.stores.filter((s) => s.id !== storeId);
+    const backendStoreId = STORE_ID_MAP[storeId] || storeId;
+
+    try {
+      await StoresApi.remove(backendStoreId);
+    } catch (error) {
+      console.error("No se pudo eliminar la tienda en BD", error);
+      alert("No se pudo eliminar la tienda en el servidor. Intenta de nuevo.");
+      return;
+    }
+
+    const next = this.state.stores.filter((s) => s.id !== storeId && s.id !== backendStoreId);
     this.saveStores(next);
 
     const patch = {};
