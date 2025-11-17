@@ -381,11 +381,12 @@ export class Checkout extends React.Component {
           <form onSubmit={this.handlePay} className="grid gap-4">
             <div className="grid md:grid-cols-2 gap-4">
               <input
+                type="text"
                 className="input"
                 placeholder="Nombre y Apellidos"
-                pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\\s]+"
-                title="Solo letras y espacios"
                 required
+                pattern="^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]{2,60}$"
+                title="Ingresa de 2 a 60 caracteres; solo letras, espacios y acentos."
               />
               <input
                 className="input"
@@ -399,13 +400,13 @@ export class Checkout extends React.Component {
             </div>
 
             <input
-              className="input"
-              placeholder="Dirección exacta de entrega"
-              pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\\s]+"
-              title="Solo letras, números y espacios"
-              required
+                type="text"
+                className="input"
+                placeholder="Dirección exacta de entrega"
+                required
+                pattern="^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9°.,\-# ]{5,80}$"
+                title="Ingresa una dirección válida (entre 5 y 80 caracteres: letras, números, espacios y símbolos como ., - # º)."
             />
-
             <div>
               <label
                 className="text-sm text-slate-500"
