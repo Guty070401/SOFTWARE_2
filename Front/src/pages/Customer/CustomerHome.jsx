@@ -105,6 +105,7 @@ export class CustomerHome extends React.Component {
     } else {
       this.setState({ stores: DEFAULT_STORES });
     }
+    this.loadStoresFromBackend();
     this.ensureCatalogSynced();
   }
 
@@ -120,6 +121,31 @@ export class CustomerHome extends React.Component {
       console.log("[catalog] sincronizado automáticamente");
     } catch (error) {
       console.warn("[catalog] no se pudo sincronizar automáticamente", error);
+    }
+  };
+
+  loadStoresFromBackend = async () => {
+    try {
+      const { stores } = await StoresApi.list();
+      const mapped = (stores || []).map((store) => ({
+        id: store.id,
+        name: store.nombre || store.nombre_origen || store.name || "",
+        desc: store.descripcion || store.desc || "",
+        image: store.logo || "https://via.placeholder.com/160x160?text=Tienda",
+        items: (store.productos || store.items || []).map((p) => ({
+          id: p.id,
+          name: p.nombre || p.name,
+          desc: p.descripcion || p.desc || "",
+          price: Number(p.precio ?? p.price ?? 0),
+          image: p.foto || p.image || "https://via.placeholder.com/640x400?text=Producto",
+        })),
+      }));
+
+      if (mapped.length) {
+        this.saveStores(mapped);
+      }
+    } catch (error) {
+      console.error("No se pudieron cargar las tiendas desde el backend", error);
     }
   };
 
