@@ -63,6 +63,10 @@ export class Login extends React.Component {
             )}
             <button className="btn btn-primary w-full">Entrar</button>
           </form>
+          <p className="text-sm text-indigo-600 hover:underline">
+            <Link to="/recover-password">¿Olvidaste tu contraseña?</Link>
+          </p>
+
           <p className="text-sm text-slate-500 mt-4">
             ¿No tienes cuenta?{" "}
             <Link className="text-indigo-600 hover:underline" to="/register">
