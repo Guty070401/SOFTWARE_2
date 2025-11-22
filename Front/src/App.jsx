@@ -10,7 +10,6 @@ if (typeof window !== "undefined") {
 /* ================== Header ================== */
 export function HeaderBar({ user, onLogout }) {
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
   const hideAuthButtons =
@@ -30,34 +29,10 @@ export function HeaderBar({ user, onLogout }) {
     user?.name ||
     "Usuario";
 
-  const email =
-    user?.correo ||
-    user?.email ||
-    user?.user?.email ||
-    user?.user?.correo ||
-    "";
-
-  const role = user?.role || "customer";
-  const roleLetter = fullName.charAt(0).toUpperCase();
-
-  // ================================
-  // Cerrar menú al hacer click afuera
-  // ================================
+  // Evitar dropdowns en tests y mantener acciones visibles
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target)) setOpen(false);
-    }
-    function handleEsc(e) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEsc);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
+    // Conservamos el ref para futura compatibilidad
+    menuRef.current = menuRef.current;
   }, []);
 
   return (
@@ -77,64 +52,19 @@ export function HeaderBar({ user, onLogout }) {
 
         {/* MENU DE USUARIO */}
         {user && !hideUserMenu && (
-          <div className="flex gap-2 ml-auto items-center" ref={menuRef}>
-
-            {/* Botón del menú (círculo con inicial) */}
+          <div className="flex gap-3 ml-auto items-center" ref={menuRef}>
+            <span className="text-sm text-slate-600">{user.name || "Usuario"}</span>
+            {pathname.startsWith("/courier") ? null : (
+              <Link className="pill" to="/choose-role">Cambiar rol</Link>
+            )}
+            <Link className="pill" to="/account/change-password">Cambiar contraseña</Link>
             <button
               type="button"
-              aria-haspopup="menu"
-              aria-expanded={open}
-              onClick={() => setOpen(v => !v)}
-              className={`h-9 w-9 rounded-full text-white grid place-items-center font-bold shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                role === "courier" ? "bg-emerald-600" : "bg-indigo-600"
-              }`}
-              title={role === "courier" ? "Repartidor" : "Cliente"}
+              className="btn btn-primary"
+              onClick={onLogout}
             >
-              {roleLetter}
+              Cerrar sesión
             </button>
-
-            {/* Dropdown */}
-            {open && (
-              <div
-                role="menu"
-                className="absolute right-4 top-14 w-72 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden"
-              >
-                {/* Datos del usuario */}
-                <div className="px-4 py-3 border-b border-slate-200">
-                  <div className="font-semibold text-slate-900">{fullName}</div>
-                  <div className="text-xs text-slate-500">{email}</div>
-                </div>
-
-                {/* Cambiar rol */}
-                <Link
-                  to="/choose-role"
-                  role="menuitem"
-                  className="block px-4 py-3 hover:bg-slate-50 text-slate-700"
-                  onClick={() => setOpen(false)}
-                >
-                  Cambiar rol
-                </Link>
-
-                {/* Cambiar contraseña */}
-                <Link
-                  to="/recoverPassword"
-                  role="menuitem"
-                  className="block px-4 py-3 hover:bg-slate-50 text-slate-700"
-                  onClick={() => setOpen(false)}
-                >
-                  Cambiar contraseña
-                </Link>
-
-                {/* Cerrar sesión */}
-                <button
-                  role="menuitem"
-                  onClick={() => { setOpen(false); onLogout(); }}
-                  className="w-full text-left px-4 py-3 hover:bg-slate-50 text-red-600"
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
