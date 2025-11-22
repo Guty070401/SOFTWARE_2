@@ -150,8 +150,12 @@ export class CustomerHome extends React.Component {
   };
 
   saveStores = (stores) => {
-    this.setState({ stores });
-    localStorage.setItem(LS_KEY, JSON.stringify(stores));
+    const normalized = (stores || []).map((s) => ({
+      ...s,
+      image: s.image || "https://via.placeholder.com/160x160?text=Tienda",
+    }));
+    this.setState({ stores: normalized });
+    localStorage.setItem(LS_KEY, JSON.stringify(normalized));
   };
 
   // ====== NEW: sincronizar catÃ¡logo al backend/Supabase ======
@@ -220,8 +224,7 @@ export class CustomerHome extends React.Component {
       });
     } catch (error) {
       console.error("No se pudo guardar el producto en BD", error);
-      alert("No se pudo guardar el producto en el servidor. Intenta de nuevo.");
-      return;
+      alert("No se pudo guardar el producto en el servidor. Se guardará solo localmente.");
     }
 
     const newItem = { id: newItemId, name, price, desc, image };
@@ -249,8 +252,7 @@ export class CustomerHome extends React.Component {
       await StoresApi.removeProduct(backendProductId);
     } catch (error) {
       console.error("No se pudo eliminar el producto en BD", error);
-      alert("No se pudo eliminar el producto en el servidor. Intenta de nuevo.");
-      return;
+      alert("No se pudo eliminar el producto en el servidor. Se actualizará localmente igualmente.");
     }
 
     const next = this.state.stores.map(s => {

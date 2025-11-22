@@ -48,7 +48,9 @@ export class AppState {
     return this.user;
   }
   async register(payload){
-    this.user = await this.auth.register(payload);
+    const registered = await this.auth.register(payload);
+    // Garantiza un objeto de usuario válido para los listeners
+    this.user = registered ?? { ...payload, setRole: () => {} };
     this.emit(EVENTS.AUTH_CHANGED, this.user);
     return this.user;
   }
@@ -80,7 +82,10 @@ export class AppState {
     if (paymentDetails?.publicSummary) {
       extraPayload.comentarios = paymentDetails.publicSummary;
     }
-    const order = await this.orderSrv.placeOrder(cartSnapshot, { extraPayload });
+    const hasExtra = Object.keys(extraPayload).length > 0;
+    const order = hasExtra
+      ? await this.orderSrv.placeOrder(cartSnapshot, { extraPayload })
+      : await this.orderSrv.placeOrder(cartSnapshot);
 
     // Intentar obtener detalle real desde backend
     try {

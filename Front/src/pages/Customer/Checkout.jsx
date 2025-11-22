@@ -14,7 +14,7 @@ export class Checkout extends React.Component {
     this.state = {
       ...this.controller.getState(),
       paymentMethod: "card",
-      showCardModal: false,
+      showCardModal: true,
       cardForm: { cardNumber: "", mm: "", yy: "", cvv: "", cardName: "" },
       cashForm: { amount: "", notes: "" },
       savedDetails: { card: null, cash: null },
