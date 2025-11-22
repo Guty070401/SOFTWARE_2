@@ -10,18 +10,23 @@ const authService = require('./authService');
 const storeService = require('./storeService');
 
 const STATUS_ALIAS_MAP = new Map([
-  ['created', ORDER_STATUS.PENDING],
-  ['pending', ORDER_STATUS.PENDING],
+  ['created',   ORDER_STATUS.PENDING],
+  ['pending',   ORDER_STATUS.PENDING],
   ['pendiente', ORDER_STATUS.PENDING],
-  ['accepted', ORDER_STATUS.ACCEPTED],
-  ['aceptado', ORDER_STATUS.ACCEPTED],
-  ['picked', ORDER_STATUS.PICKED],
-  ['recogido', ORDER_STATUS.PICKED],
-  ['on_route', ORDER_STATUS.ON_ROUTE],
+
+  ['accepted',  ORDER_STATUS.ACCEPTED],
+  ['aceptado',  ORDER_STATUS.ACCEPTED],
+
+  ['picked',    ORDER_STATUS.PICKED],
+  ['recogido',  ORDER_STATUS.PICKED],
+
+  ['on_route',  ORDER_STATUS.ON_ROUTE],
   ['en_camino', ORDER_STATUS.ON_ROUTE],
+
   ['delivered', ORDER_STATUS.DELIVERED],
   ['entregado', ORDER_STATUS.DELIVERED],
-  ['canceled', ORDER_STATUS.CANCELED],
+
+  ['canceled',  ORDER_STATUS.CANCELED],
   ['cancelled', ORDER_STATUS.CANCELED],
   ['cancelado', ORDER_STATUS.CANCELED],
 ]);
@@ -32,26 +37,52 @@ function normalizeStatusValue(value) {
   return STATUS_ALIAS_MAP.get(key) || null;
 }
 
+/**
+ * 🔴 AQUÍ ESTABA EL PROBLEMA DEL TOTAL EN 0
+ * Ahora:
+ *  - mapeamos precio_unitario -> price / precio / precioUnitario
+ *  - mapeamos cantidad -> qty / cantidad
+ *  - calculamos total en base a esos valores
+ */
 function orderToDTO(orderRow, items = [], store = null) {
-  const total = items.reduce((s, it) => s + Number(it.precio_unitario) * Number(it.cantidad), 0);
+  const mappedItems = (items || []).map((it) => {
+    const unit = Number(it.precio_unitario ?? it.precio ?? 0);
+    const qty  = Number(it.cantidad ?? it.qty ?? 1);
+
+    return {
+      id: it.id,
+      productoId: it.producto_id,
+      // cantidades
+      cantidad: qty,
+      qty,
+      // precios (varios nombres para que el front siempre encuentre uno)
+      precioUnitario: unit,
+      precio: unit,
+      price: unit,
+    };
+  });
+
+  const total = mappedItems.reduce(
+    (s, it) => s + it.precioUnitario * it.cantidad,
+    0
+  );
+
   return {
     id: orderRow.id,
     tracking: orderRow.tracking,
     fecha: orderRow.fecha,
     hora: orderRow.hora,
-    estado: orderRow.estado,
+    status: orderRow.estado,       // para el front
+    estado: orderRow.estado,       // por compatibilidad
     solucion: orderRow.solucion,
     tiempoEstimado: orderRow.tiempo_estimado,
-    tienda: store ? { id: store.id, nombre: store.nombre, logo: store.logo } : undefined,
+    tienda: store
+      ? { id: store.id, nombre: store.nombre, logo: store.logo }
+      : undefined,
     direccionEntrega: orderRow.direccion_entrega,
     comentarios: orderRow.comentarios,
-    items: items.map(it => ({
-      id: it.id,
-      productoId: it.producto_id,
-      cantidad: it.cantidad,
-      precioUnitario: Number(it.precio_unitario)
-    })),
-    total
+    items: mappedItems,
+    total,
   };
 }
 
@@ -61,35 +92,49 @@ async function listOrdersForUser(userId) {
     .select('orden_id')
     .eq('usuario_id', userId)
     .eq('es_propietario', true);
+
   if (errLinks) throw errLinks;
+  if (!links || !links.length) return [];
 
-  if (!links.length) return [];
+  const orderIds = links.map((l) => l.orden_id);
 
-  const orderIds = links.map(l => l.orden_id);
   const { data: orders, error: errOrders } = await supabase
     .from('ordenes')
     .select('*')
     .in('id', orderIds)
     .order('hora', { ascending: false });
+
   if (errOrders) throw errOrders;
 
   const { data: items, error: errItems } = await supabase
     .from('orden_productos')
     .select('*')
     .in('orden_id', orderIds);
+
   if (errItems) throw errItems;
 
-  const { data: stores, error: errStores } = await supabase.from('tiendas').select('*');
-  if (errStores) throw errStores;
-  const storesMap = new Map(stores.map(s => [s.id, { id: s.id, nombre: s.nombre_origen, logo: s.logo }]));
+  const { data: stores, error: errStores } = await supabase
+    .from('tiendas')
+    .select('*');
 
-  const itemsByOrder = items.reduce((acc, it) => {
+  if (errStores) throw errStores;
+
+  const storesMap = new Map(
+    (stores || []).map((s) => [
+      s.id,
+      { id: s.id, nombre: s.nombre_origen ?? s.nombre, logo: s.logo },
+    ])
+  );
+
+  const itemsByOrder = (items || []).reduce((acc, it) => {
     acc[it.orden_id] ||= [];
     acc[it.orden_id].push(it);
     return acc;
   }, {});
 
-  return orders.map(o => orderToDTO(o, itemsByOrder[o.id] || [], storesMap.get(o.tienda_id) || null));
+  return orders.map((o) =>
+    orderToDTO(o, itemsByOrder[o.id] || [], storesMap.get(o.tienda_id) || null)
+  );
 }
 
 async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega, comentarios }) {
@@ -121,29 +166,33 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     }
   }
 
- const order = new Orden({
+  const order = new Orden({
     tiendaId: store.id,
     tarjetaId: tarjetaId || null,
     direccionEntrega: direccionEntrega || '',
-    comentarios: comentarios || ''
+    comentarios: comentarios || '',
   });
   order.id = randomUUID();
 
   const itemsToInsert = [];
+
   for (const it of items) {
     const cantidad = Number(it.cantidad) || 1;
-    const precioUnitario = Number(it.precio ?? it.precioUnitario ?? 0);
+    const precioUnitario = Number(it.precio ?? it.price ?? it.precioUnitario ?? 0);
+
     if (Number.isNaN(precioUnitario)) {
       const error = new Error(`Precio inválido para el producto: ${it.productoId}`);
       error.status = 400;
       throw error;
     }
+
     const op = new OrdenProducto({
       ordenId: order.id,
       productoId: it.productoId,
       cantidad,
       precioUnitario,
     });
+
     const opRowId = randomUUID();
     itemsToInsert.push({
       id: opRowId,
@@ -167,17 +216,18 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
       tienda_id: order.tiendaId,
       tarjeta_id: order.tarjetaId,
       direccion_entrega: order.direccionEntrega,
-      comentarios: order.comentarios
+      comentarios: order.comentarios,
     })
     .select()
     .single();
+
   if (errOrder) throw errOrder;
 
   const owner = new OrdenUsuario({
     ordenId: order.id,
     usuarioId: user.id,
     esPropietario: true,
-    esRepartidor: false
+    esRepartidor: false,
   });
   const ownerRowId = randomUUID();
 
@@ -186,12 +236,14 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     orden_id: owner.ordenId,
     usuario_id: owner.usuarioId,
     es_propietario: owner.esPropietario,
-    es_repartidor: owner.esRepartidor
+    es_repartidor: owner.esRepartidor,
   });
   if (errLink) throw errLink;
 
   if (itemsToInsert.length) {
-    const { error: errItems } = await supabase.from('orden_productos').insert(itemsToInsert);
+    const { error: errItems } = await supabase
+      .from('orden_productos')
+      .insert(itemsToInsert);
     if (errItems) throw errItems;
   }
 
@@ -199,7 +251,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     ordenId: order.id,
     estado: insertedOrder.estado,
     comentarios: insertedOrder.comentarios,
-    hora: new Date()
+    hora: new Date(),
   });
 
   const histRowId = randomUUID();
@@ -208,7 +260,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     orden_id: he.ordenId,
     estado: he.estado,
     comentarios: he.comentarios,
-    hora: he.hora.toISOString()
+    hora: he.hora.toISOString(),
   });
   if (errHist) throw errHist;
 
@@ -222,6 +274,7 @@ async function getOrderByIdForUser(orderId, userId) {
     .eq('orden_id', orderId)
     .eq('usuario_id', userId)
     .maybeSingle();
+
   if (errLink) throw errLink;
   if (!link) {
     const e = new Error('No tienes acceso a esta orden');
@@ -229,7 +282,11 @@ async function getOrderByIdForUser(orderId, userId) {
     throw e;
   }
 
-  const { data: o, error: errO } = await supabase.from('ordenes').select('*').eq('id', orderId).maybeSingle();
+  const { data: o, error: errO } = await supabase
+    .from('ordenes')
+    .select('*')
+    .eq('id', orderId)
+    .maybeSingle();
   if (errO) throw errO;
   if (!o) {
     const e = new Error('Orden no encontrada');
@@ -255,7 +312,11 @@ async function updateStatus(orderId, status) {
     throw e;
   }
 
-  const { data: o, error: errO } = await supabase.from('ordenes').select('*').eq('id', orderId).maybeSingle();
+  const { data: o, error: errO } = await supabase
+    .from('ordenes')
+    .select('*')
+    .eq('id', orderId)
+    .maybeSingle();
   if (errO) throw errO;
   if (!o) {
     const e = new Error('Orden no encontrada');
@@ -271,7 +332,8 @@ async function updateStatus(orderId, status) {
     throw e;
   }
 
-  const solucion = nextStatus === ORDER_STATUS.DELIVERED ? true : o.solucion;
+  const solucion =
+    nextStatus === ORDER_STATUS.DELIVERED ? true : o.solucion;
 
   const { data: updated, error: errUpd } = await supabase
     .from('ordenes')
@@ -285,15 +347,16 @@ async function updateStatus(orderId, status) {
     ordenId: orderId,
     estado: nextStatus,
     comentarios: '',
-    hora: new Date()
+    hora: new Date(),
   });
+
   const statusHistRowId = randomUUID();
   const { error: errHist } = await supabase.from('historial_estados').insert({
     id: statusHistRowId,
     orden_id: he.ordenId,
     estado: he.estado,
     comentarios: he.comentarios,
-    hora: he.hora.toISOString()
+    hora: he.hora.toISOString(),
   });
   if (errHist) throw errHist;
 
@@ -312,5 +375,5 @@ module.exports = {
   listOrdersForUser,
   getOrderByIdForUser,
   updateStatus,
-  ORDER_STATUS
+  ORDER_STATUS,
 };

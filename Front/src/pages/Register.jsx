@@ -103,7 +103,6 @@ export class Register extends React.Component {
                   className="input mt-1"
                   value={this.state.phone}
                   onChange={(e) => this.setState({ phone: e.target.value })}
-                  placeholder="Opcional"
                   inputMode="numeric"
                   maxLength={9}
                   pattern="9[0-9]{8}"

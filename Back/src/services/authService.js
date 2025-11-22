@@ -1,3 +1,4 @@
+// Back/src/services/authService.js
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { supabase } = require('../data/database');
@@ -77,12 +78,14 @@ async function login({ correo, password }) {
     err.status = 401;
     throw err;
   }
+
   const matches = await bcrypt.compare(password, user.password_hash).catch(() => false);
   if (!matches && password !== user.password_hash) {
     const err = new Error('Credenciales inválidas');
     err.status = 401;
     throw err;
   }
+
   const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: JWT_EXPIRES });
   return { user: toPublicUser(user), token };
 }
@@ -92,9 +95,46 @@ function verifyToken(token) {
 }
 
 async function getUserById(id) {
-  const { data, error } = await supabase.from('usuarios').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
   if (error) throw error;
   return data || null;
+}
+
+// 🔹 NUEVO: cambiar contraseña del usuario logueado
+async function changePassword({ userId, oldPassword, newPassword }) {
+  // 1. Buscar usuario
+  const user = await getUserById(userId);
+  if (!user) {
+    const err = new Error('Usuario no encontrado');
+    err.status = 404;
+    throw err;
+  }
+
+  // 2. Verificar contraseña actual contra password_hash
+  const matches = await bcrypt.compare(oldPassword, user.password_hash).catch(() => false);
+  if (!matches && oldPassword !== user.password_hash) {
+    const err = new Error('Contraseña actual incorrecta');
+    err.status = 400;
+    throw err;
+  }
+
+  // 3. Hashear nueva contraseña y actualizar en Supabase
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .update({ password_hash: hashed })
+    .eq('id', userId)
+    .select()
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return toPublicUser(data);
 }
 
 module.exports = {
@@ -102,5 +142,6 @@ module.exports = {
   login,
   verifyToken,
   getUserById,
-  toPublicUser
+  toPublicUser,
+  changePassword, // 👈 importante
 };
