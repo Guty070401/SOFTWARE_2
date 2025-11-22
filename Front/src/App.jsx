@@ -8,7 +8,6 @@ if (typeof window !== "undefined") {
 }
 
 /* ================== Header ================== */
-
 export function HeaderBar({ user, onLogout }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
@@ -21,20 +20,40 @@ export function HeaderBar({ user, onLogout }) {
 
   const hideUserMenu = pathname.startsWith("/choose-role");
 
-  const role = appState.user?.role;
-  const roleLetter =
-    role === "customer" ? "C" :
-    role === "courier"  ? "R" :
-    (appState.user?.name?.[0] || "U").toUpperCase();
+  // ================================
+  // 📌 DATOS DEL USUARIO
+  // ================================
+  const fullName =
+    user?.nombre ||
+    user?.nombre_completo ||
+    user?.fullName ||
+    user?.name ||
+    "Usuario";
 
+  const email =
+    user?.correo ||
+    user?.email ||
+    user?.user?.email ||
+    user?.user?.correo ||
+    "";
+
+  const role = user?.role || "customer";
+  const roleLetter = fullName.charAt(0).toUpperCase();
+
+  // ================================
+  // Cerrar menú al hacer click afuera
+  // ================================
   useEffect(() => {
     function handleClickOutside(e) {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(e.target)) setOpen(false);
     }
-    function handleEsc(e) { if (e.key === "Escape") setOpen(false); }
+    function handleEsc(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEsc);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEsc);
@@ -48,6 +67,7 @@ export function HeaderBar({ user, onLogout }) {
           UFOOD
         </span>
 
+        {/* BOTONES LOGIN / REGISTRO */}
         {!user && !hideAuthButtons && (
           <nav className="flex gap-2 ml-auto">
             <Link className="pill" to="/login">Login</Link>
@@ -55,9 +75,11 @@ export function HeaderBar({ user, onLogout }) {
           </nav>
         )}
 
+        {/* MENU DE USUARIO */}
         {user && !hideUserMenu && (
           <div className="flex gap-2 ml-auto items-center" ref={menuRef}>
 
+            {/* Botón del menú (círculo con inicial) */}
             <button
               type="button"
               aria-haspopup="menu"
@@ -75,8 +97,15 @@ export function HeaderBar({ user, onLogout }) {
             {open && (
               <div
                 role="menu"
-                className="absolute right-4 top-14 w-60 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden"
+                className="absolute right-4 top-14 w-72 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden"
               >
+                {/* Datos del usuario */}
+                <div className="px-4 py-3 border-b border-slate-200">
+                  <div className="font-semibold text-slate-900">{fullName}</div>
+                  <div className="text-xs text-slate-500">{email}</div>
+                </div>
+
+                {/* Cambiar rol */}
                 <Link
                   to="/choose-role"
                   role="menuitem"
@@ -85,14 +114,18 @@ export function HeaderBar({ user, onLogout }) {
                 >
                   Cambiar rol
                 </Link>
+
+                {/* Cambiar contraseña */}
                 <Link
-                  to="/account/change-password"
+                  to="/recoverPassword"
                   role="menuitem"
                   className="block px-4 py-3 hover:bg-slate-50 text-slate-700"
                   onClick={() => setOpen(false)}
                 >
                   Cambiar contraseña
                 </Link>
+
+                {/* Cerrar sesión */}
                 <button
                   role="menuitem"
                   onClick={() => { setOpen(false); onLogout(); }}
@@ -109,6 +142,7 @@ export function HeaderBar({ user, onLogout }) {
   );
 }
 
+/* ================== APP ROOT ================== */
 export default class App extends React.Component {
   state = { user: null };
 

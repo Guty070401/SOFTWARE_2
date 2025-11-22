@@ -13,6 +13,8 @@ import OrderDetail from "./pages/Courier/OrderDetail.jsx";
 import Register from "./pages/Register.jsx";
 import CustomerOrders from "./pages/Customer/CustomerOrders";
 import AdminCatalog from './pages/AdminCatalog';
+import RecoverPassword from "./pages/RecoverPassword.jsx";
+
 // Rutas de la aplicación
 const router = createBrowserRouter([
   { path: "/", element: <App />,
@@ -29,6 +31,7 @@ const router = createBrowserRouter([
       { path: "customer/order/:id", element: <OrderDetail /> },
       { path: "/customer/orders", element: <CustomerOrders /> },
       { path: 'admin/catalog', element: <AdminCatalog /> },
+      { path: "recoverPassword", element: <RecoverPassword /> },
     ]
   }
 ]);

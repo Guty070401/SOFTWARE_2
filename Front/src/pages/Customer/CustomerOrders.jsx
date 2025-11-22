@@ -47,8 +47,7 @@ export class CustomerOrders extends React.Component {
   }
 
   openOrder(id) {
-    // Reusa la misma vista de detalle
-    this.props.navigate(`/courier/order/${id}`);
+    this.props.navigate(`/customer/order/${id}`);
   }
 
   volverATienda() {
@@ -83,10 +82,24 @@ export class CustomerOrders extends React.Component {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {orders.map((o) => {
-                const rawStatus = String(o.status || "");
+                const rawStatus = String(o.status || o.estado || "");
                 const statusNorm = rawStatus.toLowerCase();
                 const isDelivered =
                   statusNorm === "delivered" || statusNorm === "entregado";
+
+                // 🔹 total robusto
+                const total =
+                  o.total != null
+                    ? Number(o.total)
+                    : Array.isArray(o.items)
+                    ? o.items.reduce(
+                        (a, it) =>
+                          a +
+                          Number(it.price ?? it.precio ?? it.precioUnitario ?? 0) *
+                            Number(it.qty ?? it.cantidad ?? 1),
+                        0
+                      )
+                    : 0;
 
                 return (
                   <div key={o.id} className="card">
@@ -96,27 +109,29 @@ export class CustomerOrders extends React.Component {
                         <p className="font-semibold">#{o.id}</p>
                       </div>
 
-                      {/* Badge de estado con check verde si está entregado */}
                       <span
-  className={`px-3 py-1 rounded-full text-xs font-semibold border capitalize inline-flex items-center gap-1
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border capitalize inline-flex items-center gap-1
     ${
       isDelivered
         ? "bg-green-100 text-green-700 border-green-300"
         : "bg-slate-100 text-slate-700 border-slate-300"
     }
   `}
->
-  {isDelivered && <span className="text-base leading-none">✓</span>}
-  {isDelivered ? "Entregado" : o.status}
-</span>
-
+                      >
+                        {isDelivered && (
+                          <span className="text-base leading-none">✓</span>
+                        )}
+                        {isDelivered ? "Entregado" : rawStatus}
+                      </span>
                     </div>
 
                     <p className="text-sm text-slate-500 mt-2">
-                      {o.items.length} ítems
+                      {o.items?.length || 0} ítems
                     </p>
                     <div className="flex items-center justify-between mt-4">
-                      <span className="font-semibold">S/ {o.total}</span>
+                      <span className="font-semibold">
+                        S/ {total.toFixed(2)}
+                      </span>
                       <button
                         className="btn btn-primary"
                         onClick={() => this.openOrder(o.id)}
