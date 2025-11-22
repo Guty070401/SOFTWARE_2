@@ -81,7 +81,10 @@ export class AppState {
     if (paymentDetails?.publicSummary) {
       extraPayload.comentarios = paymentDetails.publicSummary;
     }
-    const order = await this.orderSrv.placeOrder(cartSnapshot, { extraPayload });
+    const hasExtra = Object.keys(extraPayload).length > 0;
+    const order = hasExtra
+      ? await this.orderSrv.placeOrder(cartSnapshot, { extraPayload })
+      : await this.orderSrv.placeOrder(cartSnapshot);
 
     try {
       const fromApi = await this.orderSrv.getById(order.id);
@@ -127,7 +130,7 @@ export class AppState {
     if (paymentDetails?.method === 'cash' && Number(paymentDetails.amount)) {
       const amount = Number(paymentDetails.amount);
       const change = Math.max(0, amount - order.total);
-      const base = paymentDetails.publicSummary || `PAGARÁ CON S/ ${amount.toFixed(2)}`;
+      const base = paymentDetails.publicSummary || `PAGARÃ CON S/ ${amount.toFixed(2)}`;
       const withChange = change > 0 ? `${base} (vuelto S/ ${change.toFixed(2)})` : base;
       order.paymentSummary = withChange;
       order.paymentDetails.publicSummary = withChange;

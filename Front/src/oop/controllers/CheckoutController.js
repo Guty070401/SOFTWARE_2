@@ -81,9 +81,8 @@ class CheckoutController {
     try {
       const cart = this.appState.cart || [];
       if (!cart.length) throw new Error("Tu carrito está vacío");
-      if (!paymentDetails) throw new Error("Debes guardar el método de pago");
 
-      const order = await this.appState.placeOrder({ paymentDetails });
+      const order = await this.appState.placeOrder(paymentDetails ? { paymentDetails } : {});
       if (typeof navigate === "function") {
         navigate(`/customer/order/${order.id}`, { replace: true });
       }
