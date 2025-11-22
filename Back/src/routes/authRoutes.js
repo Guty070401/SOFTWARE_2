@@ -1,7 +1,6 @@
 // Back/src/routes/authRoutes.js
 const express = require('express');
 const authController = require('../controllers/authController');
-const requireAuth = require('../middlewares/requireAuth');
 
 const router = express.Router();
 
@@ -9,11 +8,8 @@ const router = express.Router();
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
-// 🔹 Cambiar contraseña (requiere estar logueado)
-router.post(
-  '/change-password',
-  requireAuth,
-  authController.changePassword
-);
+// Verificaci�n de correo
+router.get('/verify-email', authController.verifyEmail);
+router.post('/verify-email', authController.verifyEmail);
 
 module.exports = router;

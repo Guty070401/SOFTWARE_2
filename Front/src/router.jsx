@@ -14,13 +14,15 @@ import Register from "./pages/Register.jsx";
 import CustomerOrders from "./pages/Customer/CustomerOrders";
 import AdminCatalog from './pages/AdminCatalog';
 import RecoverPassword from "./pages/RecoverPassword.jsx";
+import VerifyEmail from "./pages/VerifyEmail.jsx";
 
-// Rutas de la aplicación
+// Rutas de la aplicacin
 const router = createBrowserRouter([
   { path: "/", element: <App />,
     children: [
       { index: true, element: <Login /> },
       { path: "register", element: <Register /> },
+      { path: "verify-email", element: <VerifyEmail /> },
       { path: "choose-role", element: <ChooseRole /> },
       { path: "customer", element: <CustomerHome /> },
       { path: "customer/cart", element: <Cart /> },

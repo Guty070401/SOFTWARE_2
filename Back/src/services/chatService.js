@@ -39,17 +39,18 @@ async function listMessages(orderId, userId) {
   return (data || []).map(mapMessage);
 }
 
-async function sendMessage(orderId, userId, mensaje) {
+async function sendMessage(orderId, userId, mensaje, roleHint = null) {
   if (!mensaje || !mensaje.trim()) {
     const err = new Error('El mensaje es requerido');
     err.status = 400;
     throw err;
   }
   const link = await ensureAccess(orderId, userId);
+  const roleNorm = roleHint ? String(roleHint).toLowerCase() : '';
   const messageRow = {
     orden_id: orderId,
     usuario_id: userId,
-    rol: link.es_repartidor ? 'courier' : 'customer',
+    rol: link.es_repartidor || roleNorm === 'courier' || roleNorm === 'repartidor' ? 'courier' : 'customer',
     mensaje: mensaje.trim(),
     creado_en: new Date().toISOString(),
   };
