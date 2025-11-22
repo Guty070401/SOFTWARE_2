@@ -15,12 +15,10 @@ export class AppState {
     } = options;
 
     if (AppState.instance && !forceNew) return AppState.instance;
-    this.listeners = new Map(); // { event: Set<fn> }
-    // Estado
+    this.listeners = new Map();
     this.user = null;
     this.cart = /** @type {Item[]} */([]);
     this.orders = [];
-    // Servicios
     this.auth = auth;
     this.orderSrv = orderSrv;
     this.chatByOrder = new Map();
@@ -30,7 +28,6 @@ export class AppState {
     AppState.instance = this;
   }
 
-  // --- Pub/Sub simple ---
   on(event, fn){
     if (!this.listeners.has(event)) this.listeners.set(event, new Set());
     this.listeners.get(event).add(fn);
@@ -41,23 +38,28 @@ export class AppState {
     if (subs) subs.forEach(fn => fn(payload));
   }
 
-  // --- Auth ---
   async login(email, pass){
     this.user = await this.auth.login(email, pass);
     this.emit(EVENTS.AUTH_CHANGED, this.user);
     return this.user;
   }
   async register(payload){
-    this.user = await this.auth.register(payload);
+    const u = await this.auth.register(payload);
+    this.user = null;
+    this.emit(EVENTS.AUTH_CHANGED, null);
+    return u;
+  }
+  async verifyEmailToken(token){
+    const u = await this.auth.verifyEmailToken(token);
+    this.user = u;
     this.emit(EVENTS.AUTH_CHANGED, this.user);
-    return this.user;
+    return u;
   }
   setRole(role){
     if (this.user) { this.user.setRole(role); this.emit(EVENTS.AUTH_CHANGED, this.user); }
   }
   logout(){ this.auth.logout && this.auth.logout(); this.user = null; this.emit(EVENTS.AUTH_CHANGED, null); }
 
-  // --- Cart ---
   addToCart(item) {
     const cartItem = { ...item, cartId: Date.now() + Math.random() };
     this.cart.push(cartItem);
@@ -67,12 +69,11 @@ export class AppState {
     this.cart = this.cart.filter(i => i.cartId !== cartId);
     this.emit(EVENTS.CART_CHANGED, this.cart);
   }
-  clearCart(){ 
-    this.cart = []; 
-    this.emit(EVENTS.CART_CHANGED, this.cart); 
+  clearCart(){
+    this.cart = [];
+    this.emit(EVENTS.CART_CHANGED, this.cart);
   }
 
-  // --- Orders ---
   async placeOrder(meta = {}){
     const cartSnapshot = Array.isArray(this.cart) ? [...this.cart] : [];
     const paymentDetails = meta?.paymentDetails || null;
@@ -82,7 +83,6 @@ export class AppState {
     }
     const order = await this.orderSrv.placeOrder(cartSnapshot, { extraPayload });
 
-    // Intentar obtener detalle real desde backend
     try {
       const fromApi = await this.orderSrv.getById(order.id);
       if (fromApi && typeof fromApi === 'object') Object.assign(order, fromApi);
@@ -98,13 +98,11 @@ export class AppState {
       }
     }
 
-    // Enriquecer con snapshot del carrito si faltan datos
     const detailedItems = cartSnapshot.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty ?? 1, image: i.image }));
 
     if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
       order.items = detailedItems;
     } else {
-      // Completar datos faltantes usando el snapshot del carrito
       const mapById = new Map();
       cartSnapshot.forEach(i => { mapById.set(String(i.id), i); });
       order.items = order.items.map(it => {
@@ -119,15 +117,24 @@ export class AppState {
       });
     }
 
-    // Total y estado por defecto
     const sum = (Array.isArray(order.items) ? order.items : []).reduce((a, it)=> {
-      const p = Number(it.price ?? it.precio ?? 0);
+      const p = Number(it.price ?? it.precio ?? it.precioUnitario ?? 0);
       const q = Number(it.qty ?? it.cantidad ?? 1);
       return a + (p * q);
     }, 0);
     if (order.total == null || Number(order.total) === 0) order.total = Number(sum.toFixed(2));
+
+    if (paymentDetails?.method === 'cash' && Number(paymentDetails.amount)) {
+      const amount = Number(paymentDetails.amount);
+      const change = Math.max(0, amount - order.total);
+      const base = paymentDetails.publicSummary || `PAGARÁ CON S/ ${amount.toFixed(2)}`;
+      const withChange = change > 0 ? `${base} (vuelto S/ ${change.toFixed(2)})` : base;
+      order.paymentSummary = withChange;
+      order.paymentDetails.publicSummary = withChange;
+      order.comentarios = withChange;
+    }
+
     if (!order.customerName && this.user?.name) order.customerName = this.user.name;
-    // Normalizar estado a nuestros valores conocidos
     const normalize = (s)=> {
       if (!s) return null;
       const v = String(s).toLowerCase().replace(/\s+/g,'_');
@@ -152,12 +159,10 @@ export class AppState {
     const found = this.orders.find(o => o.id === orderId);
     if (!found) return null;
     await this.orderSrv.updateStatus(found, status);
-    // Refrescar desde backend si es posible
     try {
       const fresh = await this.orderSrv.getById(found.id);
       if (fresh && typeof fresh === 'object') Object.assign(found, fresh);
     } catch {}
-    // Normalizar estado para el front
     const normalize = (s)=> {
       if (!s) return null;
       const v = String(s).toLowerCase().replace(/\s+/g,'_');
@@ -170,7 +175,7 @@ export class AppState {
         ['delivered', OrderStatus.DELIVERED], ['entregado', OrderStatus.DELIVERED],
         ['canceled', OrderStatus.CANCELED], ['cancelled', OrderStatus.CANCELED], ['cancelado', OrderStatus.CANCELED]
       ]);
-      return map.get(v) || OrderStatus.PENDING;
+        return map.get(v) || OrderStatus.PENDING;
     };
     found.status = normalize(found.status);
     this.emit(EVENTS.ORDERS_CHANGED, this.orders);
@@ -208,7 +213,6 @@ export class AppState {
     return this.orders;
   }
 
-  // --- Chat ---
   getChatMessages(orderId){
     return this.chatByOrder.get(String(orderId)) || [];
   }
@@ -303,5 +307,5 @@ AppState.instance = null;
 
 export const createAppState = (options = {})=> new AppState({ ...options, forceNew: true });
 
-const appState = new AppState(); // Singleton
+const appState = new AppState();
 export default appState;

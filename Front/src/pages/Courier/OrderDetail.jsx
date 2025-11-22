@@ -39,7 +39,7 @@ export class OrderDetail extends React.Component {
 
   async cancelOrderAsCustomer() {
     if (!this.state.order) return;
-    if (!window.confirm("¿Seguro que deseas cancelar este pedido?")) return;
+    if (!window.confirm("�Seguro que deseas cancelar este pedido?")) return;
     try {
       await appState.updateStatus(this.state.order.id, OrderStatus.CANCELED);
     } catch (e) {
@@ -57,7 +57,6 @@ export class OrderDetail extends React.Component {
     const isCourier = userRole === "courier";
     const isCustomer = userRole === "customer";
 
-    // destino y texto dinámicos
     const backTo = isCourier ? "/courier" : "/customer/orders";
     const backLabel = isCourier
       ? "Volver a pedidos asignados"
@@ -66,7 +65,6 @@ export class OrderDetail extends React.Component {
     const customerName =
       o.customerName || o.customer?.name || o.user?.name || null;
 
-    // 👉 flujo del repartidor SIN estado cancelado
     const statusFlow = [
       OrderStatus.PENDING,
       OrderStatus.ACCEPTED,
@@ -94,18 +92,35 @@ export class OrderDetail extends React.Component {
     const isCanceled =
       statusNorm.includes("cancelado") || statusNorm.includes("canceled");
 
-    // El cliente solo puede cancelar si está pendiente y no está cancelado/entregado
     const canCustomerCancel =
       isCustomer &&
       !isCanceled &&
       !isDelivered &&
       currentStatusKey === OrderStatus.PENDING;
 
+    const firstItemName =
+      Array.isArray(o.items) && o.items.length
+        ? (o.items[0].name || `Producto ${o.items[0].productoId || o.items[0].id}`)
+        : null;
+    const displayDate = o.fecha ? new Date(o.fecha).toLocaleDateString() : "";
+    const displayTitle = firstItemName
+      ? `Pedido - ${firstItemName}${displayDate ? ` (${displayDate})` : ""}`
+      : `Pedido #${o.id}`;
+
+    const statusTimeline = [
+      { key: OrderStatus.PENDING, label: statusLabel(OrderStatus.PENDING) },
+      { key: OrderStatus.ACCEPTED, label: statusLabel(OrderStatus.ACCEPTED) },
+      { key: OrderStatus.PICKED, label: statusLabel(OrderStatus.PICKED) },
+      { key: OrderStatus.ON_ROUTE, label: statusLabel(OrderStatus.ON_ROUTE) },
+      { key: OrderStatus.DELIVERED, label: statusLabel(OrderStatus.DELIVERED) },
+    ];
+    const activeIndex = statusTimeline.findIndex((s) => s.key === currentStatusKey);
+
     return (
       <section className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="card">
-            <h1 className="text-xl font-semibold">Pedido #{o.id}</h1>
+            <h1 className="text-xl font-semibold">{displayTitle}</h1>
             {customerName && (
               <p className="text-sm text-slate-500 mt-1">
                 Cliente: {customerName}
@@ -144,9 +159,35 @@ export class OrderDetail extends React.Component {
               </ul>
             ) : (
               <p className="text-slate-500 mt-3">
-                No hay ítems para mostrar.
+                No hay items para mostrar.
               </p>
             )}
+
+            {/* Timeline de estados */}
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-slate-600 mb-2">
+                Progreso del pedido
+              </p>
+              <div className="grid grid-cols-5 gap-2 text-xs text-center text-slate-600">
+                {statusTimeline.map((st, idx) => {
+                  const isDone = activeIndex >= idx && activeIndex !== -1;
+                  const isCurrent = activeIndex === idx;
+                  return (
+                    <div key={st.key} className="flex flex-col items-center gap-1">
+                      <div
+                        className={`h-3 w-full rounded-full ${
+                          isDone ? "bg-indigo-600" : "bg-slate-200"
+                        }`}
+                        title={st.label}
+                      />
+                      <span className={`${isCurrent ? "font-semibold" : ""}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -167,10 +208,10 @@ export class OrderDetail extends React.Component {
                 `}
               >
                 {isDelivered && (
-                  <span className="text-base leading-none">✓</span>
+                  <span className="text-base leading-none">?</span>
                 )}
                 {isCanceled && (
-                  <span className="text-base leading-none">✕</span>
+                  <span className="text-base leading-none">?</span>
                 )}
                 {isDelivered
                   ? "Entregado"
@@ -203,7 +244,6 @@ export class OrderDetail extends React.Component {
               })()}
             </div>
 
-            {/* Botón volver */}
             <div className="mt-4">
               <Link
                 to={backTo}
@@ -222,7 +262,6 @@ export class OrderDetail extends React.Component {
               </div>
             )}
 
-            {/* Botón rojo para el cliente: cancelar pedido */}
             {canCustomerCancel && (
               <button
                 className="btn w-full mt-4 bg-red-600 text-white hover:bg-red-700"
@@ -232,7 +271,6 @@ export class OrderDetail extends React.Component {
               </button>
             )}
 
-            {/* Solo el repartidor puede avanzar estado */}
             {isCourier && !isCanceled && !isDelivered && (
               <button
                 onClick={() => this.setState({ modal: true })}
@@ -247,7 +285,6 @@ export class OrderDetail extends React.Component {
           </div>
         </aside>
 
-        {/* Modal para repartidor */}
         {isCourier && this.state.modal && !isCanceled && !isDelivered && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
             <div className="card relative w-full max-w-sm">
@@ -256,7 +293,7 @@ export class OrderDetail extends React.Component {
                 onClick={() => this.setState({ modal: false })}
                 className="absolute right-3 top-3 text-slate-500 hover:text-slate-700"
               >
-                ×
+                ?
               </button>
               <h3 className="text-lg font-semibold mb-4">
                 Actualizar Estado

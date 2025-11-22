@@ -55,3 +55,15 @@ exports.removeCard = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    await userService.changePassword(req.user.id, {
+      oldPassword: req.body.oldPassword ?? req.body.current ?? req.body.actual,
+      newPassword: req.body.newPassword ?? req.body.nueva ?? req.body.password
+    });
+    res.json({ message: 'Password actualizada' });
+  } catch (error) {
+    next(error);
+  }
+};

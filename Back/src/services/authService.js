@@ -1,8 +1,9 @@
-// Back/src/services/authService.js
 const jwt = require('jsonwebtoken');
+const { randomUUID } = require('node:crypto');
 const bcrypt = require('bcrypt');
 const { supabase } = require('../data/database');
 const Usuario = require('../models/Usuario');
+const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '1h';
@@ -30,22 +31,27 @@ function toPublicUser(row) {
     celular: row.celular,
     foto: row.foto,
     rol: row.rol,
-    solucion: row.solucion
+    solucion: row.solucion,
+    emailVerificado: !!row.email_verificado
   };
 }
 
 async function register({ nombre, correo, password, celular = '', rol = 'customer' }) {
   const existing = await findByEmail(correo);
   if (existing) {
-    const err = new Error('El correo ya está registrado');
+    const err = new Error('El correo ya esta registrado');
     err.status = 409;
     throw err;
   }
 
-  const temp = await Usuario.createWithPassword({
+  const verificationToken = randomUUID();
+  const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const temp = new Usuario({
     nombreUsuario: nombre,
     correo,
-    password,
+    passwordHash,
     celular,
     rol
   });
@@ -60,32 +66,45 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
       password_hash: temp.passwordHash,
       foto: temp.foto,
       rol: temp.rol,
-      solucion: temp.solucion
+      solucion: temp.solucion,
+      email_verificado: false,
+      email_verificacion_token: verificationToken,
+      email_verificacion_expira: verificationExpires
     })
     .select()
     .single();
 
   if (error) throw error;
 
-  const token = jwt.sign(buildTokenPayload(data), JWT_SECRET, { expiresIn: JWT_EXPIRES });
-  return { user: toPublicUser(data), token };
+  emailService
+    .sendVerificationEmail({ to: temp.correo, nombre: temp.nombreUsuario, token: verificationToken })
+    .catch(err => console.error('[email] verification', err));
+
+  return { user: toPublicUser(data) };
 }
 
 async function login({ correo, password }) {
   const user = await findByEmail(correo);
   if (!user) {
-    const err = new Error('Credenciales inválidas');
+    const err = new Error('Credenciales invalidas');
     err.status = 401;
     throw err;
   }
-
-  const matches = await bcrypt.compare(password, user.password_hash).catch(() => false);
-  if (!matches && password !== user.password_hash) {
-    const err = new Error('Credenciales inválidas');
+  let matches = false;
+  if (user.password_hash) {
+    try { matches = await bcrypt.compare(password, user.password_hash); } catch (_) {}
+    if (!matches && user.password_hash === password) matches = true; // compatibilidad si guardado en plano
+  }
+  if (!matches) {
+    const err = new Error('Credenciales invalidas');
     err.status = 401;
     throw err;
   }
-
+  if (!user.email_verificado) {
+    const err = new Error('Debes verificar tu correo antes de iniciar sesion');
+    err.status = 403;
+    throw err;
+  }
   const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: JWT_EXPIRES });
   return { user: toPublicUser(user), token };
 }
@@ -95,46 +114,45 @@ function verifyToken(token) {
 }
 
 async function getUserById(id) {
-  const { data, error } = await supabase
-    .from('usuarios')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  const { data, error } = await supabase.from('usuarios').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data || null;
 }
 
-// 🔹 NUEVO: cambiar contraseña del usuario logueado
-async function changePassword({ userId, oldPassword, newPassword }) {
-  // 1. Buscar usuario
-  const user = await getUserById(userId);
-  if (!user) {
-    const err = new Error('Usuario no encontrado');
-    err.status = 404;
+async function verifyEmail(token) {
+  if (!token) {
+    const err = new Error('Token requerido');
+    err.status = 400;
     throw err;
   }
-
-  // 2. Verificar contraseña actual contra password_hash
-  const matches = await bcrypt.compare(oldPassword, user.password_hash).catch(() => false);
-  if (!matches && oldPassword !== user.password_hash) {
-    const err = new Error('Contraseña actual incorrecta');
+  const now = new Date().toISOString();
+  const { data: user, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('email_verificacion_token', token)
+    .gt('email_verificacion_expira', now)
+    .maybeSingle();
+  if (error) throw error;
+  if (!user) {
+    const err = new Error('Token invalido o expirado');
     err.status = 400;
     throw err;
   }
 
-  // 3. Hashear nueva contraseña y actualizar en Supabase
-  const hashed = await bcrypt.hash(newPassword, 10);
-
-  const { data, error } = await supabase
+  const { data: updated, error: errUpd } = await supabase
     .from('usuarios')
-    .update({ password_hash: hashed })
-    .eq('id', userId)
+    .update({
+      email_verificado: true,
+      email_verificacion_token: null,
+      email_verificacion_expira: null
+    })
+    .eq('id', user.id)
     .select()
-    .maybeSingle();
+    .single();
+  if (errUpd) throw errUpd;
 
-  if (error) throw error;
-
-  return toPublicUser(data);
+  const tokenJwt = jwt.sign(buildTokenPayload(updated), JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  return { user: toPublicUser(updated), token: tokenJwt };
 }
 
 module.exports = {
@@ -143,5 +161,5 @@ module.exports = {
   verifyToken,
   getUserById,
   toPublicUser,
-  changePassword, // 👈 importante
+  verifyEmail
 };

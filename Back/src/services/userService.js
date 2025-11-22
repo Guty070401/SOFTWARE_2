@@ -1,4 +1,4 @@
-// Back/src/services/userService.js  (CommonJS)
+const bcrypt = require('bcrypt');
 const { supabase } = require('../data/database');
 const Tarjeta = require('../models/Tarjeta');
 const authService = require('./authService');
@@ -40,7 +40,7 @@ async function listCards(userId) {
   const { data, error } = await supabase
     .from('tarjetas')
     .select('*')
-    .eq('usuario_id', userId)
+    .eq('usuario_id', userId);
   if (error) throw error;
   return data;
 }
@@ -76,10 +76,38 @@ async function removeCard(userId, cardId) {
   if (error) throw error;
 }
 
+async function changePassword(userId, { oldPassword, newPassword }) {
+  const user = await requireUser(userId);
+  if (!oldPassword || !newPassword) {
+    const err = new Error('oldPassword y newPassword son requeridos');
+    err.status = 400;
+    throw err;
+  }
+  let matches = false;
+  if (!user.password_hash) {
+    matches = true; // permite establecer contraseña si no hay previa (compatibilidad)
+  } else {
+    try { matches = await bcrypt.compare(oldPassword, user.password_hash); } catch (_) {}
+    if (!matches && user.password_hash === oldPassword) matches = true; // fallback plano
+  }
+  if (!matches) {
+    const err = new Error('La contraseña actual no coincide');
+    err.status = 401;
+    throw err;
+  }
+  const newHash = await bcrypt.hash(newPassword, 10);
+  const { error } = await supabase
+    .from('usuarios')
+    .update({ password_hash: newHash })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 module.exports = {
   getProfile,
   updateProfile,
   listCards,
   addCard,
-  removeCard
+  removeCard,
+  changePassword
 };

@@ -1,4 +1,3 @@
-// Back/src/controllers/authController.js
 const authService = require('../services/authService');
 
 exports.register = async (req, res, next) => {
@@ -30,24 +29,11 @@ exports.login = async (req, res, next) => {
   }
 };
 
-// 🔹 NUEVO: cambiar contraseña del usuario logueado
-exports.changePassword = async (req, res, next) => {
+exports.verifyEmail = async (req, res, next) => {
   try {
-    const userId = req.userId; // viene de requireAuth
-
-    if (!userId) {
-      return res.status(401).json({ message: 'No autorizado' });
-    }
-
-    const { oldPassword, newPassword } = req.body;
-
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ message: 'Faltan datos' });
-    }
-
-    await authService.changePassword({ userId, oldPassword, newPassword });
-
-    return res.json({ message: 'Contraseña actualizada correctamente' });
+    const token = req.query.token || req.body.token;
+    const result = await authService.verifyEmail(token);
+    res.json(result);
   } catch (error) {
     next(error);
   }

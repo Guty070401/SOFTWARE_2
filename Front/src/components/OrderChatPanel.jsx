@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import appState from "../oop/state/AppState";
 
 export default class OrderChatPanel extends React.Component {
@@ -46,6 +46,7 @@ export default class OrderChatPanel extends React.Component {
   render() {
     const { messages, input, loading, sending, error } = this.state;
     const currentUserId = appState.user?.id;
+    const currentUserRole = String(appState.user?.role || "customer").toLowerCase();
     if (!this.props.orderId) return null;
     return (
       <div className="card mt-6">
@@ -64,18 +65,22 @@ export default class OrderChatPanel extends React.Component {
           ) : (
             messages.map((msg) => {
               const isMine = currentUserId && msg.usuarioId === currentUserId;
+              const roleValue = String(msg.rol || msg.role || "").toLowerCase();
+              const roleName = roleValue || (isMine ? currentUserRole : "customer");
+              const isCourier = roleName === "courier" || roleName === "repartidor";
+              const bubbleClass = isMine ? "bg-indigo-600 text-white" : "bg-white border";
+              const label = isCourier ? "Repartidor" : "Cliente";
               return (
                 <div
                   key={msg.id}
                   className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                 >
-                  <div
-                    className={`rounded px-3 py-2 text-sm max-w-[80%] ${
-                      isMine ? "bg-indigo-600 text-white" : "bg-white border"
-                    }`}
-                  >
-                    <div className="font-semibold mb-1 text-xs">
-                      {msg.rol === "courier" ? "Repartidor" : "Cliente"}
+                  <div className={`rounded px-3 py-2 text-sm max-w-[80%] ${bubbleClass}`}>
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2 py-[2px] rounded-full bg-slate-200 text-slate-700">
+                        {label}
+                      </span>
+                      {isMine && <span className="text-slate-500">(tú)</span>}
                     </div>
                     <div>{msg.mensaje}</div>
                     <div className="text-[11px] opacity-60 mt-1">
@@ -90,13 +95,13 @@ export default class OrderChatPanel extends React.Component {
         <form onSubmit={this.handleSubmit} className="mt-3 flex flex-col gap-2">
           <textarea
             className="input min-h-[60px]"
-            placeholder="Escribe un mensaje…"
+            placeholder="Escribe un mensaje..."
             value={input}
             onChange={(e) => this.setState({ input: e.target.value })}
           />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button className="btn btn-primary self-end" disabled={sending || !input.trim()}>
-            {sending ? "Enviando…" : "Enviar"}
+            {sending ? "Enviando..." : "Enviar"}
           </button>
         </form>
       </div>
