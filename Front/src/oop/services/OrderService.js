@@ -1,4 +1,4 @@
-// Servicio de órdenes OOP conectado al backend real
+// Servicio de ordenes OOP conectado al backend real
 import ApiClient from './ApiClient.js';
 
 export default class OrderService {
@@ -6,22 +6,26 @@ export default class OrderService {
 
   async placeOrder(cart, options = {}){
     const { storeIdOverride = null, extraPayload = {} } = options;
-    if (!Array.isArray(cart) || cart.length === 0) throw new Error('Carrito vacío');
+    if (!Array.isArray(cart) || cart.length === 0) throw new Error('Carrito vacio');
     const storeId = storeIdOverride || cart[0]?.storeId || 'store_demo';
-    const items = cart.map(i => ({ productoId: i.id, cantidad: i.qty ?? 1 }));
+    const items = cart.map(i => ({
+      productoId: i.id,
+      cantidad: i.qty ?? 1,
+      precio: Number(i.price ?? i.precio ?? i.precioUnitario ?? 0),
+      name: i.name,
+      image: i.image
+    }));
     const payload = {
       storeId,
       items,
       tarjetaId: null,
-      direccionEntrega: 'Dirección demo',
+      direccionEntrega: 'Direccion demo',
       comentarios: '',
       ...extraPayload,
     };
     const { order } = await this.api.post('/api/orders', payload);
     return order;
   }
-
-
 
   async updateStatus(order, status){
     const sLower = String(status || '').toLowerCase();

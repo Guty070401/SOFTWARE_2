@@ -13,12 +13,16 @@ import OrderDetail from "./pages/Courier/OrderDetail.jsx";
 import Register from "./pages/Register.jsx";
 import CustomerOrders from "./pages/Customer/CustomerOrders";
 import AdminCatalog from './pages/AdminCatalog';
-// Rutas de la aplicación
+import RecoverPassword from "./pages/RecoverPassword.jsx";
+import VerifyEmail from "./pages/VerifyEmail.jsx";
+
+// Rutas de la aplicacin
 const router = createBrowserRouter([
   { path: "/", element: <App />,
     children: [
       { index: true, element: <Login /> },
       { path: "register", element: <Register /> },
+      { path: "verify-email", element: <VerifyEmail /> },
       { path: "choose-role", element: <ChooseRole /> },
       { path: "customer", element: <CustomerHome /> },
       { path: "customer/cart", element: <Cart /> },
@@ -29,6 +33,7 @@ const router = createBrowserRouter([
       { path: "customer/order/:id", element: <OrderDetail /> },
       { path: "/customer/orders", element: <CustomerOrders /> },
       { path: 'admin/catalog', element: <AdminCatalog /> },
+      { path: "recoverPassword", element: <RecoverPassword /> },
     ]
   }
 ]);

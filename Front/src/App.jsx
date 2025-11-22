@@ -8,7 +8,6 @@ if (typeof window !== "undefined") {
 }
 
 /* ================== Header ================== */
-
 export function HeaderBar({ user, onLogout }) {
   const { pathname } = useLocation();
   const menuRef = useRef(null);
@@ -20,11 +19,15 @@ export function HeaderBar({ user, onLogout }) {
 
   const hideUserMenu = pathname.startsWith("/choose-role");
 
-  const role = appState.user?.role;
-  const roleLetter =
-    role === "customer" ? "C" :
-    role === "courier"  ? "R" :
-    (appState.user?.name?.[0] || "U").toUpperCase();
+  // ================================
+  // 📌 DATOS DEL USUARIO
+  // ================================
+  const fullName =
+    user?.nombre ||
+    user?.nombre_completo ||
+    user?.fullName ||
+    user?.name ||
+    "Usuario";
 
   // Evitar dropdowns en tests y mantener acciones visibles
   useEffect(() => {
@@ -39,6 +42,7 @@ export function HeaderBar({ user, onLogout }) {
           UFOOD
         </span>
 
+        {/* BOTONES LOGIN / REGISTRO */}
         {!user && !hideAuthButtons && (
           <nav className="flex gap-2 ml-auto">
             <Link className="pill" to="/login">Login</Link>
@@ -46,6 +50,7 @@ export function HeaderBar({ user, onLogout }) {
           </nav>
         )}
 
+        {/* MENU DE USUARIO */}
         {user && !hideUserMenu && (
           <div className="flex gap-3 ml-auto items-center" ref={menuRef}>
             <span className="text-sm text-slate-600">{user.name || "Usuario"}</span>
@@ -67,6 +72,7 @@ export function HeaderBar({ user, onLogout }) {
   );
 }
 
+/* ================== APP ROOT ================== */
 export default class App extends React.Component {
   state = { user: null };
 

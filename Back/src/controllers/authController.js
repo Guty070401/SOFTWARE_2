@@ -28,3 +28,13 @@ exports.login = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const token = req.query.token || req.body.token;
+    const result = await authService.verifyEmail(token);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};

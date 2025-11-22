@@ -11,5 +11,6 @@ router.patch('/me', userController.updateMe);
 router.get('/me/cards', userController.listCards);
 router.post('/me/cards', userController.addCard);
 router.delete('/me/cards/:cardId', userController.removeCard);
+router.post('/me/change-password', userController.changePassword);
 
 module.exports = router;

@@ -8,20 +8,21 @@ const HistorialEstado = require('../models/HistorialEstado');
 const { ORDER_STATUS, ORDER_STATUS_FLOW, isValidOrderStatus } = require('../constants/orderStatus');
 const authService = require('./authService');
 const storeService = require('./storeService');
+const emailService = require('./emailService');
 
 const STATUS_ALIAS_MAP = new Map([
-  ['created', ORDER_STATUS.PENDING],
-  ['pending', ORDER_STATUS.PENDING],
+  ['created',   ORDER_STATUS.PENDING],
+  ['pending',   ORDER_STATUS.PENDING],
   ['pendiente', ORDER_STATUS.PENDING],
-  ['accepted', ORDER_STATUS.ACCEPTED],
-  ['aceptado', ORDER_STATUS.ACCEPTED],
-  ['picked', ORDER_STATUS.PICKED],
-  ['recogido', ORDER_STATUS.PICKED],
-  ['on_route', ORDER_STATUS.ON_ROUTE],
+  ['accepted',  ORDER_STATUS.ACCEPTED],
+  ['aceptado',  ORDER_STATUS.ACCEPTED],
+  ['picked',    ORDER_STATUS.PICKED],
+  ['recogido',  ORDER_STATUS.PICKED],
+  ['on_route',  ORDER_STATUS.ON_ROUTE],
   ['en_camino', ORDER_STATUS.ON_ROUTE],
   ['delivered', ORDER_STATUS.DELIVERED],
   ['entregado', ORDER_STATUS.DELIVERED],
-  ['canceled', ORDER_STATUS.CANCELED],
+  ['canceled',  ORDER_STATUS.CANCELED],
   ['cancelled', ORDER_STATUS.CANCELED],
   ['cancelado', ORDER_STATUS.CANCELED],
 ]);
@@ -33,25 +34,36 @@ function normalizeStatusValue(value) {
 }
 
 function orderToDTO(orderRow, items = [], store = null) {
-  const total = items.reduce((s, it) => s + Number(it.precio_unitario) * Number(it.cantidad), 0);
+  const mappedItems = (items || []).map((it) => {
+    const unit = Number(it.precio_unitario ?? it.precio ?? 0);
+    const qty  = Number(it.cantidad ?? it.qty ?? 1);
+    return {
+      id: it.id,
+      productoId: it.producto_id,
+      cantidad: qty,
+      qty,
+      precioUnitario: unit,
+      precio: unit,
+      price: unit,
+    };
+  });
+
+  const total = mappedItems.reduce((s, it) => s + it.precioUnitario * it.cantidad, 0);
+
   return {
     id: orderRow.id,
     tracking: orderRow.tracking,
     fecha: orderRow.fecha,
     hora: orderRow.hora,
+    status: orderRow.estado,
     estado: orderRow.estado,
     solucion: orderRow.solucion,
     tiempoEstimado: orderRow.tiempo_estimado,
     tienda: store ? { id: store.id, nombre: store.nombre, logo: store.logo } : undefined,
     direccionEntrega: orderRow.direccion_entrega,
     comentarios: orderRow.comentarios,
-    items: items.map(it => ({
-      id: it.id,
-      productoId: it.producto_id,
-      cantidad: it.cantidad,
-      precioUnitario: Number(it.precio_unitario)
-    })),
-    total
+    items: mappedItems,
+    total,
   };
 }
 
@@ -62,10 +74,10 @@ async function listOrdersForUser(userId) {
     .eq('usuario_id', userId)
     .eq('es_propietario', true);
   if (errLinks) throw errLinks;
+  if (!links || !links.length) return [];
 
-  if (!links.length) return [];
+  const orderIds = links.map((l) => l.orden_id);
 
-  const orderIds = links.map(l => l.orden_id);
   const { data: orders, error: errOrders } = await supabase
     .from('ordenes')
     .select('*')
@@ -79,17 +91,22 @@ async function listOrdersForUser(userId) {
     .in('orden_id', orderIds);
   if (errItems) throw errItems;
 
-  const { data: stores, error: errStores } = await supabase.from('tiendas').select('*');
+  const { data: stores, error: errStores } = await supabase
+    .from('tiendas')
+    .select('*');
   if (errStores) throw errStores;
-  const storesMap = new Map(stores.map(s => [s.id, { id: s.id, nombre: s.nombre_origen, logo: s.logo }]));
 
-  const itemsByOrder = items.reduce((acc, it) => {
+  const storesMap = new Map(
+    (stores || []).map((s) => [s.id, { id: s.id, nombre: s.nombre_origen ?? s.nombre, logo: s.logo }])
+  );
+
+  const itemsByOrder = (items || []).reduce((acc, it) => {
     acc[it.orden_id] ||= [];
     acc[it.orden_id].push(it);
     return acc;
   }, {});
 
-  return orders.map(o => orderToDTO(o, itemsByOrder[o.id] || [], storesMap.get(o.tienda_id) || null));
+  return orders.map((o) => orderToDTO(o, itemsByOrder[o.id] || [], storesMap.get(o.tienda_id) || null));
 }
 
 async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega, comentarios }) {
@@ -115,26 +132,26 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
       .maybeSingle();
     if (errCard) throw errCard;
     if (!card || card.usuario_id !== userId || card.invalidada) {
-      const error = new Error('Tarjeta inválida o no pertenece al usuario');
+      const error = new Error('Tarjeta invalida o no pertenece al usuario');
       error.status = 400;
       throw error;
     }
   }
 
- const order = new Orden({
+  const order = new Orden({
     tiendaId: store.id,
     tarjetaId: tarjetaId || null,
     direccionEntrega: direccionEntrega || '',
-    comentarios: comentarios || ''
+    comentarios: comentarios || '',
   });
   order.id = randomUUID();
 
   const itemsToInsert = [];
   for (const it of items) {
     const cantidad = Number(it.cantidad) || 1;
-    const precioUnitario = Number(it.precio ?? it.precioUnitario ?? 0);
+    const precioUnitario = Number(it.precio ?? it.price ?? it.precioUnitario ?? 0);
     if (Number.isNaN(precioUnitario)) {
-      const error = new Error(`Precio inválido para el producto: ${it.productoId}`);
+      const error = new Error(`Precio invalido para el producto: ${it.productoId}`);
       error.status = 400;
       throw error;
     }
@@ -167,7 +184,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
       tienda_id: order.tiendaId,
       tarjeta_id: order.tarjetaId,
       direccion_entrega: order.direccionEntrega,
-      comentarios: order.comentarios
+      comentarios: order.comentarios,
     })
     .select()
     .single();
@@ -177,7 +194,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     ordenId: order.id,
     usuarioId: user.id,
     esPropietario: true,
-    esRepartidor: false
+    esRepartidor: false,
   });
   const ownerRowId = randomUUID();
 
@@ -186,7 +203,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     orden_id: owner.ordenId,
     usuario_id: owner.usuarioId,
     es_propietario: owner.esPropietario,
-    es_repartidor: owner.esRepartidor
+    es_repartidor: owner.esRepartidor,
   });
   if (errLink) throw errLink;
 
@@ -199,7 +216,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     ordenId: order.id,
     estado: insertedOrder.estado,
     comentarios: insertedOrder.comentarios,
-    hora: new Date()
+    hora: new Date(),
   });
 
   const histRowId = randomUUID();
@@ -208,7 +225,7 @@ async function createOrder(userId, { storeId, items, tarjetaId, direccionEntrega
     orden_id: he.ordenId,
     estado: he.estado,
     comentarios: he.comentarios,
-    hora: he.hora.toISOString()
+    hora: he.hora.toISOString(),
   });
   if (errHist) throw errHist;
 
@@ -229,7 +246,11 @@ async function getOrderByIdForUser(orderId, userId) {
     throw e;
   }
 
-  const { data: o, error: errO } = await supabase.from('ordenes').select('*').eq('id', orderId).maybeSingle();
+  const { data: o, error: errO } = await supabase
+    .from('ordenes')
+    .select('*')
+    .eq('id', orderId)
+    .maybeSingle();
   if (errO) throw errO;
   if (!o) {
     const e = new Error('Orden no encontrada');
@@ -250,12 +271,16 @@ async function getOrderByIdForUser(orderId, userId) {
 async function updateStatus(orderId, status) {
   const nextStatus = normalizeStatusValue(status);
   if (!nextStatus || !isValidOrderStatus(nextStatus)) {
-    const e = new Error('Estado no válido');
+    const e = new Error('Estado no valido');
     e.status = 400;
     throw e;
   }
 
-  const { data: o, error: errO } = await supabase.from('ordenes').select('*').eq('id', orderId).maybeSingle();
+  const { data: o, error: errO } = await supabase
+    .from('ordenes')
+    .select('*')
+    .eq('id', orderId)
+    .maybeSingle();
   if (errO) throw errO;
   if (!o) {
     const e = new Error('Orden no encontrada');
@@ -266,7 +291,7 @@ async function updateStatus(orderId, status) {
   const currentStatus = normalizeStatusValue(o.estado);
   const allowedNext = ORDER_STATUS_FLOW[currentStatus] || [];
   if (!allowedNext.includes(nextStatus)) {
-    const e = new Error(`Transición inválida de ${o.estado} a ${nextStatus}`);
+    const e = new Error(`Transicion invalida de ${o.estado} a ${nextStatus}`);
     e.status = 400;
     throw e;
   }
@@ -285,7 +310,7 @@ async function updateStatus(orderId, status) {
     ordenId: orderId,
     estado: nextStatus,
     comentarios: '',
-    hora: new Date()
+    hora: new Date(),
   });
   const statusHistRowId = randomUUID();
   const { error: errHist } = await supabase.from('historial_estados').insert({
@@ -293,7 +318,7 @@ async function updateStatus(orderId, status) {
     orden_id: he.ordenId,
     estado: he.estado,
     comentarios: he.comentarios,
-    hora: he.hora.toISOString()
+    hora: he.hora.toISOString(),
   });
   if (errHist) throw errHist;
 
@@ -304,6 +329,73 @@ async function updateStatus(orderId, status) {
   if (errItems) throw errItems;
 
   const store = await storeService.getStore(updated.tienda_id);
+
+  // Notificaciones de correo
+  const total = (items || []).reduce((s, it) => s + Number(it.precio_unitario || 0) * Number(it.cantidad || 0), 0);
+  const monto = total.toFixed(2);
+  const isCard = !!updated.tarjeta_id;
+
+  let owner = null;
+  try {
+    const { data: linkOwner } = await supabase
+      .from('orden_usuarios')
+      .select('usuario_id')
+      .eq('orden_id', orderId)
+      .eq('es_propietario', true)
+      .maybeSingle();
+    if (linkOwner?.usuario_id) owner = await authService.getUserById(linkOwner.usuario_id);
+  } catch (e) {
+    console.error('[email] owner fetch', e);
+  }
+
+  let repartidorNombre = null;
+  try {
+    const { data: linkCourier } = await supabase
+      .from('orden_usuarios')
+      .select('usuario_id')
+      .eq('orden_id', orderId)
+      .eq('es_repartidor', true)
+      .limit(1)
+      .maybeSingle();
+    if (linkCourier?.usuario_id) {
+      const courier = await authService.getUserById(linkCourier.usuario_id);
+      repartidorNombre = courier?.nombre_usuario || courier?.nombre || null;
+    }
+  } catch (e) {
+    console.error('[email] courier fetch', e);
+  }
+
+  try {
+    if (updated.estado === ORDER_STATUS.ACCEPTED && !isCard && owner?.correo) {
+      await emailService.sendCashAcceptedEmail({
+        to: owner.correo,
+        nombre: owner.nombre_usuario || owner.nombre,
+        monto,
+        repartidor: repartidorNombre,
+        orderId,
+      });
+    }
+    if (updated.estado === ORDER_STATUS.DELIVERED && owner?.correo) {
+      if (isCard) {
+        await emailService.sendCardChargedEmail({
+          to: owner.correo,
+          nombre: owner.nombre_usuario || owner.nombre,
+          monto,
+          orderId,
+        });
+      } else {
+        await emailService.sendCashDeliveredEmail({
+          to: owner.correo,
+          nombre: owner.nombre_usuario || owner.nombre,
+          monto,
+          orderId,
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[email] order status', e);
+  }
+
   return orderToDTO(updated, items, store);
 }
 
@@ -312,5 +404,5 @@ module.exports = {
   listOrdersForUser,
   getOrderByIdForUser,
   updateStatus,
-  ORDER_STATUS
+  ORDER_STATUS,
 };
