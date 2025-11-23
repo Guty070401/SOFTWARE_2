@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">22.22% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>2/9</span>
+                <span class='fraction'>9/9</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/3</span>
+                <span class='fraction'>2/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/3</span>
+                <span class='fraction'>3/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">22.22% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>2/9</span>
+                <span class='fraction'>9/9</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -105,19 +105,19 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -130,26 +130,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { generateId } = require('../utils/id');
 &nbsp;
 class OrdenProducto {
-<span class="fstat-no" title="function not covered" >  co</span>nstructor({
-    id = <span class="branch-0 cbranch-no" title="branch not covered" >generateId('ord_prod_'),</span>
+  constructor({
+    id = generateId('ord_prod_'),
     ordenId,
     productoId,
     cantidad,
     precioUnitario
   }) {
-<span class="cstat-no" title="statement not covered" >    this.id = id;</span>
-<span class="cstat-no" title="statement not covered" >    this.ordenId = ordenId;</span>
-<span class="cstat-no" title="statement not covered" >    this.productoId = productoId;</span>
-<span class="cstat-no" title="statement not covered" >    this.cantidad = Number(cantidad) || 1;</span>
-<span class="cstat-no" title="statement not covered" >    this.precioUnitario = Number(precioUnitario);</span>
+    this.id = id;
+    this.ordenId = ordenId;
+    this.productoId = productoId;
+    this.cantidad = Number(cantidad) || <span class="branch-1 cbranch-no" title="branch not covered" >1;</span>
+    this.precioUnitario = Number(precioUnitario);
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  su</span>btotal() {
-<span class="cstat-no" title="statement not covered" >    return this.cantidad * this.precioUnitario;</span>
+  subtotal() {
+    return this.cantidad * this.precioUnitario;
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  to</span>JSON() {
-<span class="cstat-no" title="statement not covered" >    return {</span>
+  toJSON() {
+    return {
       productoId: this.productoId,
       cantidad: this.cantidad,
       precioUnitario: this.precioUnitario,
@@ -166,7 +166,7 @@ module.exports = OrdenProducto;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-14T06:06:56.188Z
+                at 2025-11-23T00:10:30.797Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

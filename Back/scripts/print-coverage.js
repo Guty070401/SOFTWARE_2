@@ -17,10 +17,12 @@ async function main(){
   const totals = summary.total || {};
   const keys = ["lines", "statements", "functions", "branches"];
   const rows = keys
-    .filter((key)=> totals[key])
-    .map((key)=>{
-      const { pct, covered, total } = totals[key];
-      return `${key.padEnd(11)} ${pct.toFixed(1).padStart(6)}%   (${covered}/${total})`;
+    .map((key)=> totals[key])
+    .filter(Boolean)
+    .map((entry, idx)=>{
+      const key = keys[idx];
+      const pct = Number(entry.pct) || 0;
+      return `${key.padEnd(11)} ${pct.toFixed(1).padStart(6)}%   (${entry.covered}/${entry.total})`;
     });
 
   if (!rows.length) {

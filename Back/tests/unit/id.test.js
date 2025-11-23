@@ -9,4 +9,11 @@ describe("generateId", () => {
     expect(ids.size).toBe(5);
     ids.forEach((id) => expect(id.startsWith("ord_")).toBe(true));
   });
+
+  it("uses empty prefix by default", () => {
+    const id = generateId();
+    expect(id.startsWith("ord_")).toBe(false);
+    expect(typeof id).toBe("string");
+    expect(id.length).toBeGreaterThan(4);
+  });
 });

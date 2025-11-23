@@ -53,7 +53,7 @@ describe("CustomerOrders page (integration)", () => {
     expect(screen.getByText("#92")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: /ver detalle/i })[0]);
-    expect(navigate).toHaveBeenCalledWith("/courier/order/91");
+    expect(navigate).toHaveBeenCalledWith("/customer/order/91");
 
     await user.click(
       screen.getAllByRole("button", { name: /volver a la tienda/i })[0]

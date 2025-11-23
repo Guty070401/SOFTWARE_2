@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { act } from "react";
@@ -56,13 +56,19 @@ describe("Auth and role selection pages", () => {
     );
     const textFields = screen.getAllByRole("textbox");
     fireEvent.change(textFields[0], { target: { value: "Ada" } });
-    fireEvent.change(textFields[1], { target: { value: "ada@example.com" } });
+    fireEvent.change(textFields[1], { target: { value: "12345678@aloe.ulima.edu.pe" } });
+    fireEvent.change(textFields[2], { target: { value: "912345678" } });
+    const passwordInputs = Array.from(document.querySelectorAll('input[type="password"]'));
+    fireEvent.change(passwordInputs[0], { target: { value: "Abcdef1!" } });
+    fireEvent.change(passwordInputs[1], { target: { value: "Abcdef1!" } });
     await act(async ()=>{
       fireEvent.submit(screen.getByRole("button", { name: /Registrarme/i }));
     });
     expect(appStateMock.register).toHaveBeenCalledWith({
       name: "Ada",
-      email: "ada@example.com",
+      email: "12345678@aloe.ulima.edu.pe",
+      password: "Abcdef1!",
+      celular: "912345678",
     });
     expect(navigate).toHaveBeenCalledWith("/choose-role", { replace: true });
   });

@@ -142,11 +142,12 @@ describe("Checkout page (integration)", () => {
       "Av 1"
     );
     await user.selectOptions(
-      screen.getByLabelText("Método de pago"),
+      screen.getByLabelText(/M.?todo de pago/i),
       "card"
     );
+    await user.click(screen.getByRole("button", { name: /Ingresar tarjeta/i }));
     await user.type(
-      await screen.findByPlaceholderText("Nro. tarjeta (XXXX-XXXX-XXXX-XXXX)"),
+      await screen.findByPlaceholderText(/Nro\. tarjeta/),
       "1234567890123456"
     );
     await user.type(screen.getByPlaceholderText("MM"), "09");

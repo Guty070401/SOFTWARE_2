@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { apiMock } = vi.hoisted(()=> ({
+const { apiMock } = vi.hoisted(() => ({
   apiMock: {
-    post: vi.fn(),
+    get: vi.fn(),
   },
 }));
 
@@ -13,16 +13,14 @@ vi.mock("../../../src/services/api.js", () => ({
 describe("catalog service", () => {
   beforeEach(() => {
     vi.resetModules();
-    apiMock.post.mockReset();
+    apiMock.get.mockReset();
   });
 
-  it("exposes the seed catalog and calls backend sync", async () => {
-    const { seedCatalog, syncCatalog } = await import("../../../src/services/catalog.js");
-    apiMock.post.mockResolvedValueOnce({ synced: true });
+  it("calls backend sync endpoint", async () => {
+    apiMock.get.mockResolvedValueOnce({ synced: true });
+    const { syncCatalog } = await import("../../../src/services/catalog.js");
     const response = await syncCatalog();
-    expect(Array.isArray(seedCatalog)).toBe(true);
-    expect(seedCatalog.length).toBeGreaterThan(0);
-    expect(apiMock.post).toHaveBeenCalledWith("/api/catalog/sync", { catalog: seedCatalog });
+    expect(apiMock.get).toHaveBeenCalledWith("/api/catalog/refresh");
     expect(response).toEqual({ synced: true });
   });
 });

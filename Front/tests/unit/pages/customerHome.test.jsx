@@ -1,7 +1,6 @@
-import React from "react";
-import { act } from "react";
+﻿import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { createAppStateMock } from "../../utils/appStateMock.js";
 import { CustomerHome } from "../../../src/pages/Customer/CustomerHome.jsx";
@@ -10,25 +9,37 @@ import { EVENTS } from "../../../src/oop/state/events.js";
 const appStateModule = vi.hoisted(() => ({ mock: null }));
 
 vi.mock("../../../src/oop/state/AppState.js", () => ({
-  get default(){
+  get default() {
     return appStateModule.mock;
   },
+}));
+
+const syncCatalogMock = vi.hoisted(() => vi.fn());
+vi.mock("../../../src/services/catalog.js", () => ({
+  syncCatalog: syncCatalogMock,
+}));
+
+const storesApiMock = vi.hoisted(() => ({
+  list: vi.fn(),
+  create: vi.fn(),
+  remove: vi.fn(),
+  createProduct: vi.fn(),
+  removeProduct: vi.fn(),
+}));
+vi.mock("../../../src/services/storeService.js", () => ({
+  StoresApi: storesApiMock,
 }));
 
 const { mock: appStateMock, listeners, reset } = createAppStateMock();
 appStateModule.mock = appStateMock;
 
-const syncCatalogMock = vi.hoisted(()=> vi.fn().mockResolvedValue({ ok: true }));
-
-vi.mock("../../../src/services/catalog.js", () => ({
-  syncCatalog: syncCatalogMock,
-}));
-
 const localStorageValues = new Map();
 const localStorageMock = {
-  getItem: vi.fn((key)=> localStorageValues.has(key) ? localStorageValues.get(key) : null),
-  setItem: vi.fn((key, value)=> localStorageValues.set(key, value)),
-  removeItem: vi.fn((key)=> localStorageValues.delete(key)),
+  getItem: vi.fn((key) =>
+    localStorageValues.has(key) ? localStorageValues.get(key) : null
+  ),
+  setItem: vi.fn((key, value) => localStorageValues.set(key, value)),
+  removeItem: vi.fn((key) => localStorageValues.delete(key)),
 };
 
 global.localStorage = localStorageMock;
@@ -36,140 +47,161 @@ global.alert = vi.fn();
 global.confirm = vi.fn(() => true);
 global.prompt = vi.fn();
 
-function createInstance(initialState){
-  const instance = new CustomerHome({});
-  instance.state = { ...instance.state, ...initialState };
-  instance.setState = (update)=>{
-    const patch = typeof update === "function" ? update(instance.state) : update;
-    instance.state = { ...instance.state, ...patch };
-  };
-  return instance;
-}
+const renderHome = () =>
+  render(
+    <MemoryRouter>
+      <CustomerHome />
+    </MemoryRouter>
+  );
 
-describe("CustomerHome catalog management", () => {
+describe("CustomerHome", () => {
   beforeEach(() => {
     reset();
     localStorageValues.clear();
-    localStorageMock.getItem.mockClear();
-    localStorageMock.setItem.mockClear();
-    localStorageMock.removeItem.mockClear();
-    syncCatalogMock.mockClear();
+    Object.values(localStorageMock).forEach((fn) => fn.mockClear());
+    Object.values(storesApiMock).forEach((fn) => fn.mockClear());
+    syncCatalogMock.mockReset();
     global.alert.mockClear();
     global.confirm.mockClear();
     global.prompt.mockClear();
+    appStateMock.cart = [];
+    appStateMock.user = null;
   });
 
-  it("loads catalog from defaults, syncs, and handles CRUD operations", async () => {
-    localStorageMock.getItem.mockReturnValueOnce(null);
-    const instance = createInstance();
-    instance.componentDidMount();
-    await act(async ()=>{
-      listeners.get(EVENTS.CART_CHANGED)?.([{ id: "p1" }]);
+  it("sincroniza el catalogo al montar, carga tiendas y permite agregar al carrito", async () => {
+    localStorageValues.set("user", JSON.stringify({ email: "admin@ulima.edu.pe" }));
+    appStateMock.cart = [{ id: "c1" }, { id: "c2" }];
+    storesApiMock.list.mockResolvedValue({
+      stores: [
+        {
+          id: "s1",
+          nombre: "Store Uno",
+          descripcion: "Desc",
+          logo: "logo.png",
+          productos: [
+            { id: "p1", nombre: "Prod Uno", descripcion: "desc p", precio: "12", foto: "pic.png" },
+          ],
+        },
+      ],
     });
-    expect(instance.state.cartCount).toBe(1);
+    syncCatalogMock.mockResolvedValue({});
 
-    await instance.onSyncCatalog();
-    expect(syncCatalogMock).toHaveBeenCalled();
-    expect(global.alert).toHaveBeenCalledWith("Catálogo sincronizado en Supabase");
+    const view = renderHome();
 
-    const stores = [
-      { id: "s_custom", name: "Custom", desc: "", image: "", items: [{ id: "item1", name: "Item", price: 10 }] },
-      { id: "s_other", name: "Other", desc: "", image: "", items: [] },
-    ];
-    instance.saveStores(stores);
-    expect(localStorageMock.setItem).toHaveBeenCalled();
+    await screen.findByText("Store Uno");
+    expect(syncCatalogMock).toHaveBeenCalledTimes(1);
+    expect(localStorageMock.setItem).toHaveBeenCalledWith("catalog_synced", "1");
+    expect(appStateMock.on).toHaveBeenCalledWith(EVENTS.CART_CHANGED, expect.any(Function));
+    await screen.findByText(/Carrito \(2\)/i);
 
-    instance.addToCart({ id: "p1", name: "X", price: 12 }, { id: "s1" });
+    fireEvent.click(screen.getByRole("button", { name: /Ver Productos/i }));
+    await screen.findByText("Prod Uno");
+    fireEvent.click(screen.getByRole("button", { name: /^Agregar$/i }));
     expect(appStateMock.addToCart).toHaveBeenCalledWith(
-      expect.objectContaining({ id: expect.any(String), storeId: expect.any(String) })
+      expect.objectContaining({ storeId: "s1", qty: 1 })
     );
 
-    instance.handleToggleStore("s_custom");
-    expect(instance.state.selectedStoreId).toBe("s_custom");
-    instance.handleToggleStore("s_custom");
-    expect(instance.state.selectedStoreId).toBeNull();
+    listeners.get(EVENTS.CART_CHANGED)?.([{ id: "p3" }]);
+    await screen.findByText(/Carrito \(1\)/i);
 
-    global.prompt
-      .mockReturnValueOnce("New Product")
-      .mockReturnValueOnce("25.5")
-      .mockReturnValueOnce("Great")
-      .mockReturnValueOnce("")
-      .mockReturnValueOnce("New Store")
-      .mockReturnValueOnce("Desc")
-      .mockReturnValueOnce("");
-
-    instance.state.stores = stores;
-    instance.addProductToStore("s_custom");
-    expect(instance.state.stores[0].items).toHaveLength(2);
-
-    instance.removeProductFromStore("s_custom", "item1");
-    expect(instance.state.stores[0].items.some((it) => it.id === "item1")).toBe(false);
-
-    instance.addStore();
-    expect(instance.state.stores).toHaveLength(3);
-
-    instance.setState({ selectedStoreId: "s_custom", filterStoreId: "s_custom" });
-    instance.removeStore("s_custom");
-    expect(instance.state.stores.some((s) => s.id === "s_custom")).toBe(false);
-
-    instance.resetCatalog();
-    expect(localStorageMock.removeItem).toHaveBeenCalled();
-    instance.componentWillUnmount();
-  });
-
-  it("renders storefront UI, filters stores and reports sync errors", async () => {
-    localStorageMock.getItem.mockReturnValueOnce(JSON.stringify([
-      { id: "s_ui_empty", name: "UI Vacía", desc: "", image: "", items: [] },
-      { id: "s_ui_full", name: "UI Llena", desc: "", image: "", items: [{ id: "ui_prod", name: "UI Prod", price: 9, desc: "desc", image: "img.png" }] },
-    ]));
-    const view = render(
-      <MemoryRouter>
-        <CustomerHome />
-      </MemoryRouter>
-    );
-
-    await screen.findByText(/Tiendas/i);
-    await act(async ()=>{
-      listeners.get(EVENTS.CART_CHANGED)?.([{ id: "p1" }]);
-    });
-    expect(screen.getByText(/Carrito \(1\)/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getAllByRole("button", { name: /Ver Productos/i })[1]);
-    fireEvent.click(screen.getAllByRole("button", { name: /^Agregar$/i })[0]);
-    expect(appStateMock.addToCart).toHaveBeenCalledWith(
-      expect.objectContaining({ id: expect.any(String), storeId: expect.any(String) })
-    );
-
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "s1" } });
-    expect(screen.getByRole("button", { name: /Ver todos/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Ver todos/i }));
-
-    syncCatalogMock.mockRejectedValueOnce(new Error("boom"));
     fireEvent.click(screen.getByRole("button", { name: /Sincronizar cat/i }));
     await waitFor(() =>
-      expect(global.alert).toHaveBeenCalledWith(expect.stringMatching(/Error sincronizando/i))
+      expect(global.alert).toHaveBeenCalledWith(expect.stringMatching(/cat.+sincronizado/i))
     );
-
-    fireEvent.click(screen.getAllByRole("button", { name: /Ver Productos/i })[0]);
-    expect(screen.getByText(/No hay productos en esta tienda/i)).toBeInTheDocument();
 
     view.unmount();
   });
 
-  it("renders placeholder when a store has no products", () => {
-    const instance = createInstance({
-      stores: [{ id: "empty", name: "Vacía", desc: "", image: "", items: [] }],
-      selectedStoreId: "empty",
-    });
-    const tree = instance.render();
-    expect(tree).toBeTruthy();
+  it("muestra error al fallar la sincronizacion y oculta controles de admin para usuarios normales", async () => {
+    localStorageValues.set("user", JSON.stringify({ email: "admin@ulima.edu.pe" }));
+    storesApiMock.list.mockResolvedValue({ stores: [] });
+    syncCatalogMock.mockRejectedValue(new Error("boom"));
+
+    const adminView = renderHome();
+    const syncButton = await screen.findByRole("button", { name: /Sincronizar cat/i });
+    fireEvent.click(syncButton);
+    await waitFor(() =>
+      expect(global.alert).toHaveBeenCalledWith(expect.stringMatching(/error sincronizando/i))
+    );
+
+    localStorageValues.set("user", JSON.stringify({ email: "user@test.com" }));
+    global.alert.mockClear();
+    syncCatalogMock.mockResolvedValue({});
+    adminView.unmount();
+    const normalView = renderHome();
+    await screen.findAllByText(/Tiendas/i);
+    expect(screen.queryByText(/Sincronizar cat/i)).not.toBeInTheDocument();
+    normalView.unmount();
   });
 
-  it("falls back to default stores when localStorage data is invalid", () => {
-    localStorageMock.getItem.mockReturnValueOnce("not json");
-    const instance = createInstance();
-    instance.componentDidMount();
-    expect(instance.state.stores).toHaveLength(3);
-    instance.componentWillUnmount();
+  it("ejecuta acciones de administracion sobre tiendas y productos", async () => {
+    localStorageValues.set("user", JSON.stringify({ email: "admin@ulima.edu.pe" }));
+    storesApiMock.list.mockResolvedValue({
+      stores: [
+        {
+          id: "store_a",
+          nombre: "Store A",
+          descripcion: "Desc",
+          logo: "logo.png",
+          productos: [
+            { id: "prod_a", nombre: "Prod A", descripcion: "Nice", precio: "9.5", foto: "pic.png" },
+          ],
+        },
+      ],
+    });
+    storesApiMock.create.mockResolvedValue({});
+    storesApiMock.remove.mockResolvedValue({});
+    storesApiMock.createProduct.mockResolvedValue({});
+    storesApiMock.removeProduct.mockResolvedValue({});
+    syncCatalogMock.mockResolvedValue({});
+    global.prompt
+      .mockReturnValueOnce("Nueva tienda")
+      .mockReturnValueOnce("Desc tienda")
+      .mockReturnValueOnce("logo-new.png")
+      .mockReturnValueOnce("Nuevo producto")
+      .mockReturnValueOnce("15.5")
+      .mockReturnValueOnce("Prod desc")
+      .mockReturnValueOnce("prod.png");
+
+    renderHome();
+    await screen.findByText("Store A");
+
+    fireEvent.click(screen.getByRole("button", { name: /\+ Agregar tienda/i }));
+    await waitFor(() =>
+      expect(storesApiMock.create).toHaveBeenCalledWith({
+        id: "nueva_tienda",
+        nombre: "Nueva tienda",
+        descripcion: "Desc tienda",
+        logo: "logo-new.png",
+      })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Ver Productos/i }));
+    await screen.findByText("Prod A");
+
+    fireEvent.click(screen.getByRole("button", { name: /\+ Producto/i }));
+    await waitFor(() =>
+      expect(storesApiMock.createProduct).toHaveBeenCalledWith(
+        "store_a",
+        expect.objectContaining({
+          nombre: "Nuevo producto",
+          precio: 15.5,
+          descripcion: "Prod desc",
+          foto: "prod.png",
+        })
+      )
+    );
+
+    const productCard = screen.getByText("Prod A").closest("div");
+    const productDelete = within(productCard).getByRole("button", { name: /^Eliminar$/i });
+    fireEvent.click(productDelete);
+    await waitFor(() => expect(storesApiMock.removeProduct).toHaveBeenCalledWith("prod_a"));
+
+    const storeCard = screen.getByText("Store A").closest(".card") || screen.getByText("Store A").closest("section") || screen.getByText("Store A").parentElement;
+    const storeDelete = within(storeCard).getAllByRole("button", { name: /^Eliminar$/i })[0];
+    fireEvent.click(storeDelete);
+    await waitFor(() => expect(storesApiMock.remove).toHaveBeenCalledWith("store_a"));
+
+    expect(storesApiMock.list.mock.calls.length).toBeGreaterThanOrEqual(5);
   });
 });

@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import OrderService from "../../src/oop/services/OrderService";
 
 const apiMocks = {
@@ -10,7 +11,7 @@ vi.mock("../../src/oop/services/ApiClient.js", () => ({
   default: vi.fn(() => apiMocks),
 }));
 
-const resetMocks = ()=>{
+const resetMocks = () => {
   apiMocks.post.mockReset();
   apiMocks.patch.mockReset();
   apiMocks.get.mockReset();
@@ -35,10 +36,10 @@ describe("OrderService", () => {
       "/api/orders",
       expect.objectContaining({
         storeId: "store-1",
-        items: [
-          { productoId: "p1", cantidad: 2 },
-          { productoId: "p2", cantidad: 1 },
-        ],
+        items: expect.arrayContaining([
+          expect.objectContaining({ productoId: "p1", cantidad: 2 }),
+          expect.objectContaining({ productoId: "p2", cantidad: 1 }),
+        ]),
       })
     );
     expect(order).toEqual({ id: "ord-10" });

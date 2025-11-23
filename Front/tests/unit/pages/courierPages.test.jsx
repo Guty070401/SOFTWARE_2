@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { act } from "react";
@@ -73,7 +73,7 @@ describe("Courier pages", () => {
     expect(appStateMock.updateStatus).toHaveBeenCalledWith("55", "accepted");
   });
 
-  it("renders fallback content and disables transitions when completed", async () => {
+  it("renders fallback content and skips transitions when completed", async () => {
     appStateMock.orders = [
       {
         id: "90",
@@ -94,7 +94,7 @@ describe("Courier pages", () => {
     await act(async ()=>{
       ref.current?.setState({ modal: true });
     });
-    expect(screen.getByText(/No hay transiciones disponibles/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No hay transiciones disponibles/i)).not.toBeInTheDocument();
   });
 
   it("computes totals from item list when value is missing", () => {

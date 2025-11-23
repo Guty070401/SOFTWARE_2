@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">13.04% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/23</span>
+                <span class='fraction'>23/23</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">64.28% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/14</span>
+                <span class='fraction'>9/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">13.04% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/23</span>
+                <span class='fraction'>23/23</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -142,35 +142,35 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -191,48 +191,48 @@
 const { ORDER_STATUS } = require('../constants/orderStatus');
 &nbsp;
 class Orden {
-<span class="fstat-no" title="function not covered" >  co</span>nstructor({
-    id = <span class="branch-0 cbranch-no" title="branch not covered" >generateId('ord_'),</span>
-    tracking = <span class="branch-0 cbranch-no" title="branch not covered" >generateId('trk_'),</span>
+  constructor({
+    id = generateId('ord_'),
+    tracking = generateId('trk_'),
     fecha = <span class="branch-0 cbranch-no" title="branch not covered" >new Date(),</span>
     hora = <span class="branch-0 cbranch-no" title="branch not covered" >new Date(),</span>
-    estado = <span class="branch-0 cbranch-no" title="branch not covered" >ORDER_STATUS.PENDING,</span>
-    solucion = <span class="branch-0 cbranch-no" title="branch not covered" >false,</span>
-    tiempoEstimado = <span class="branch-0 cbranch-no" title="branch not covered" >null,</span>
+    estado = ORDER_STATUS.PENDING,
+    solucion = false,
+    tiempoEstimado = null,
     tiendaId,
-    tarjetaId = <span class="branch-0 cbranch-no" title="branch not covered" >null,</span>
+    tarjetaId = null,
     direccionEntrega = <span class="branch-0 cbranch-no" title="branch not covered" >'',</span>
-    comentarios = <span class="branch-0 cbranch-no" title="branch not covered" >''</span>
+    comentarios = ''
   }) {
-<span class="cstat-no" title="statement not covered" >    this.id = id;</span>
-<span class="cstat-no" title="statement not covered" >    this.tracking = tracking;</span>
-<span class="cstat-no" title="statement not covered" >    this.fecha = fecha instanceof Date ? fecha : new Date(fecha);</span>
-<span class="cstat-no" title="statement not covered" >    this.hora = hora instanceof Date ? hora : new Date(hora);</span>
-<span class="cstat-no" title="statement not covered" >    this.estado = estado;</span>
-<span class="cstat-no" title="statement not covered" >    this.solucion = solucion;</span>
-<span class="cstat-no" title="statement not covered" >    this.tiempoEstimado = tiempoEstimado;</span>
-<span class="cstat-no" title="statement not covered" >    this.tiendaId = tiendaId;</span>
-<span class="cstat-no" title="statement not covered" >    this.tarjetaId = tarjetaId;</span>
-<span class="cstat-no" title="statement not covered" >    this.direccionEntrega = direccionEntrega;</span>
-<span class="cstat-no" title="statement not covered" >    this.comentarios = comentarios;</span>
-<span class="cstat-no" title="statement not covered" >    this.items = [];</span>
-<span class="cstat-no" title="statement not covered" >    this.total = 0;</span>
-<span class="cstat-no" title="statement not covered" >    this.historial = [];</span>
-<span class="cstat-no" title="statement not covered" >    this.createdAt = new Date();</span>
+    this.id = id;
+    this.tracking = tracking;
+    this.fecha = fecha instanceof Date ? <span class="branch-0 cbranch-no" title="branch not covered" >fecha </span>: new Date(fecha);
+    this.hora = hora instanceof Date ? <span class="branch-0 cbranch-no" title="branch not covered" >hora </span>: new Date(hora);
+    this.estado = estado;
+    this.solucion = solucion;
+    this.tiempoEstimado = tiempoEstimado;
+    this.tiendaId = tiendaId;
+    this.tarjetaId = tarjetaId;
+    this.direccionEntrega = direccionEntrega;
+    this.comentarios = comentarios;
+    this.items = [];
+    this.total = 0;
+    this.historial = [];
+    this.createdAt = new Date();
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  ad</span>dItem(orderProduct) {
-<span class="cstat-no" title="statement not covered" >    this.items.push(orderProduct);</span>
-<span class="cstat-no" title="statement not covered" >    this.total = Number((this.total + orderProduct.subtotal()).toFixed(2));</span>
+  addItem(orderProduct) {
+    this.items.push(orderProduct);
+    this.total = Number((this.total + orderProduct.subtotal()).toFixed(2));
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  ad</span>dHistorial(historial) {
-<span class="cstat-no" title="statement not covered" >    this.historial.push(historial);</span>
-<span class="cstat-no" title="statement not covered" >    this.estado = historial.estado;</span>
+  addHistorial(historial) {
+    this.historial.push(historial);
+    this.estado = historial.estado;
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  to</span>JSON() {
-<span class="cstat-no" title="statement not covered" >    return {</span>
+  toJSON() {
+    return {
       id: this.id,
       tracking: this.tracking,
       fecha: this.fecha.toISOString(),
@@ -256,7 +256,7 @@ module.exports = Orden;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-14T06:06:56.276Z
+                at 2025-11-23T00:10:30.853Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

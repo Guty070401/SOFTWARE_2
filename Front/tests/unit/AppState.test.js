@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EVENTS } from "../../src/oop/state/events";
 import OrderStatus from "../../src/oop/models/OrderStatus";
 import { AppState } from "../../src/oop/state/AppState";
 
-const createDeps = ()=>{
+const createDeps = () => {
   const auth = {
     login: vi.fn(),
     register: vi.fn(),
@@ -18,7 +18,7 @@ const createDeps = ()=>{
   return { auth, orderSrv };
 };
 
-const bootstrap = ()=>{
+const bootstrap = () => {
   AppState.instance = null;
   const deps = createDeps();
   const app = new AppState({ ...deps, forceNew: true });
@@ -46,7 +46,7 @@ describe("AppState", () => {
 
     await app.register({ name: "Bob", email: "bob@example.com", password: "xyz" });
     expect(auth.register).toHaveBeenCalled();
-    expect(authListener).toHaveBeenLastCalledWith(expect.objectContaining({ name: "Bob" }));
+    expect(authListener).toHaveBeenLastCalledWith(null);
 
     app.logout();
     expect(auth.logout).toHaveBeenCalled();
@@ -87,7 +87,10 @@ describe("AppState", () => {
 
     const order = await app.placeOrder();
 
-    expect(orderSrv.placeOrder).toHaveBeenCalledWith(expect.any(Array));
+    expect(orderSrv.placeOrder).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ extraPayload: {} })
+    );
     expect(order.items[0]).toMatchObject({ id: "p1", qty: 2, name: "Burger" });
     expect(order.status).toBe(OrderStatus.PENDING);
     expect(order.total).toBeCloseTo(24);

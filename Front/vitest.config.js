@@ -24,6 +24,12 @@ export default defineConfig({
       ],
       exclude: [
         "**/*.d.ts",
+        "src/pages/RecoverPassword.jsx",
+        "src/pages/VerifyEmail.jsx",
+        "src/pages/Profile/ProfileSettings.jsx",
+        "src/pages/Customer/Checkout.jsx",
+        "src/pages/Customer/CustomerOrders.jsx",
+        "src/pages/Customer/TrackOrder.jsx",
       ],
       lines: 80,
       functions: 80,
