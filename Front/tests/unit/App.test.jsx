@@ -1,16 +1,16 @@
-import React from "react";
+﻿import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import App, { HeaderBar } from "../../src/App.jsx";
 import { EVENTS } from "../../src/oop/state/events.js";
 
-const { listeners, mockAppState } = vi.hoisted(()=> {
+const { listeners, mockAppState } = vi.hoisted(() => {
   const listeners = new Map();
   const mockAppState = {
     user: null,
-    on: vi.fn((event, cb)=> {
+    on: vi.fn((event, cb) => {
       listeners.set(event, cb);
-      return ()=> listeners.delete(event);
+      return () => listeners.delete(event);
     }),
     logout: vi.fn(),
   };
@@ -45,8 +45,9 @@ describe("HeaderBar and App integration", () => {
         <HeaderBar user={{ name: "Tester" }} onLogout={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.queryByText("Cambiar rol")).not.toBeInTheDocument();
-    expect(screen.getByText("Cerrar sesión")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByText(/Cambiar rol/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cerrar sesi/i)).toBeInTheDocument();
   });
 
   it("reacts to auth events and triggers logout", () => {
@@ -66,8 +67,9 @@ describe("HeaderBar and App integration", () => {
 
     const authListener = listeners.get(EVENTS.AUTH_CHANGED);
     expect(authListener).toBeInstanceOf(Function);
-    act(()=> authListener({ name: "Alice" }));
-    fireEvent.click(screen.getByText("Cerrar sesión"));
+    act(() => authListener({ name: "Alice" }));
+    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByText(/Cerrar sesi/i));
     expect(mockAppState.logout).toHaveBeenCalled();
     expect(window.location.href).toBe("/");
 

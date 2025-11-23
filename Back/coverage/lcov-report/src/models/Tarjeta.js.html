@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10.52% </span>
+                <span class="strong">89.47% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>2/19</span>
+                <span class='fraction'>17/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/10</span>
+                <span class='fraction'>5/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/5</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10.52% </span>
+                <span class="strong">89.47% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>2/19</span>
+                <span class='fraction'>17/19</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -127,37 +127,37 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -172,45 +172,45 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { generateId } = require('../utils/id');
 &nbsp;
 class Tarjeta {
-<span class="fstat-no" title="function not covered" >  co</span>nstructor({
-    id = <span class="branch-0 cbranch-no" title="branch not covered" >generateId('card_'),</span>
+  constructor({
+    id = generateId('card_'),
     numeroTarjeta,
     vencimiento,
     csv,
     titulo = <span class="branch-0 cbranch-no" title="branch not covered" >'',</span>
-    foto = <span class="branch-0 cbranch-no" title="branch not covered" >null</span>
+    foto = null
   }) {
-<span class="cstat-no" title="statement not covered" >    this.id = id;</span>
-<span class="cstat-no" title="statement not covered" >    this.numeroTarjeta = String(numeroTarjeta);</span>
-<span class="cstat-no" title="statement not covered" >    this.vencimiento = vencimiento instanceof Date ? vencimiento : new Date(vencimiento);</span>
-<span class="cstat-no" title="statement not covered" >    this.csv = String(csv);</span>
-<span class="cstat-no" title="statement not covered" >    this.titulo = titulo;</span>
-<span class="cstat-no" title="statement not covered" >    this.foto = foto;</span>
-<span class="cstat-no" title="statement not covered" >    this.invalidada = false;</span>
+    this.id = id;
+    this.numeroTarjeta = String(numeroTarjeta);
+    this.vencimiento = vencimiento instanceof Date ? vencimiento : <span class="branch-1 cbranch-no" title="branch not covered" >new Date(vencimiento);</span>
+    this.csv = String(csv);
+    this.titulo = titulo;
+    this.foto = foto;
+    this.invalidada = false;
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  in</span>validateCard() {
-<span class="cstat-no" title="statement not covered" >    this.invalidada = true;</span>
+  invalidateCard() {
+    this.invalidada = true;
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  is</span>Expired(referenceDate = <span class="branch-0 cbranch-no" title="branch not covered" >new Date())</span> {
-<span class="cstat-no" title="statement not covered" >    if (Number.isNaN(this.vencimiento.getTime())) {</span>
+  isExpired(referenceDate = <span class="branch-0 cbranch-no" title="branch not covered" >new Date())</span> {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (Number.isNaN(this.vencimiento.getTime())) {
 <span class="cstat-no" title="statement not covered" >      return false;</span>
     }
-<span class="cstat-no" title="statement not covered" >    return this.vencimiento &lt; referenceDate;</span>
+    return this.vencimiento &lt; referenceDate;
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  ge</span>tMaskedNumber() {
-    const digits = <span class="cstat-no" title="statement not covered" >this.numeroTarjeta.replace(/\D/g, '');</span>
-<span class="cstat-no" title="statement not covered" >    if (digits.length &lt;= 4) {</span>
+  getMaskedNumber() {
+    const digits = this.numeroTarjeta.replace(/\D/g, '');
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (digits.length &lt;= 4) {
 <span class="cstat-no" title="statement not covered" >      return digits;</span>
     }
-    const visible = <span class="cstat-no" title="statement not covered" >digits.slice(-4);</span>
-<span class="cstat-no" title="statement not covered" >    return visible.padStart(digits.length, '•');</span>
+    const visible = digits.slice(-4);
+    return visible.padStart(digits.length, '•');
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  to</span>JSON() {
-<span class="cstat-no" title="statement not covered" >    return {</span>
+  toJSON() {
+    return {
       id: this.id,
       titulo: this.titulo,
       numero: this.getMaskedNumber(),
@@ -229,7 +229,7 @@ module.exports = Tarjeta;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-14T06:06:56.188Z
+                at 2025-11-23T00:10:30.797Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

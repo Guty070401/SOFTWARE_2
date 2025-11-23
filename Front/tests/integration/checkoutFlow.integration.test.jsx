@@ -25,7 +25,11 @@ describe("Checkout flow (integration)", () => {
     const controller = CheckoutController.getInstance();
     controller.initialize({ location: {}, navigate: vi.fn() });
 
-    await controller.pay({ event: { preventDefault: () => {} }, navigate: vi.fn() });
+    await controller.pay({
+      event: { preventDefault: () => {} },
+      navigate: vi.fn(),
+      paymentDetails: { method: "card", userSummary: "ok" },
+    });
 
     expect(appState.orderSrv.placeOrder).toHaveBeenCalled();
     expect(appState.orders).toHaveLength(1);

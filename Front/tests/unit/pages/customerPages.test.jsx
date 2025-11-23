@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { act } from "react";
@@ -139,6 +139,7 @@ describe("Customer pages", () => {
         <Checkout navigate={navigate} location={{ state: { total: 30 } }} />
       </MemoryRouter>
     );
+    fireEvent.click(screen.getByRole("button", { name: /Ingresar tarjeta/i }));
     const cardInput = screen.getByPlaceholderText(/Nro\. tarjeta/i);
     fireEvent.input(cardInput, { target: { value: "1234567890123456" } });
     expect(cardInput.value).toBe("1234-5678-9012-3456");
@@ -170,7 +171,7 @@ describe("Customer pages", () => {
       </MemoryRouter>
     );
     fireEvent.click(screen.getByText(/Ver detalle/i));
-    expect(navigate).toHaveBeenCalledWith("/courier/order/1");
+    expect(navigate).toHaveBeenCalledWith("/customer/order/1");
     fireEvent.click(screen.getAllByText(/Volver a la tienda/i)[0]);
     expect(navigate).toHaveBeenCalledWith("/customer");
   });

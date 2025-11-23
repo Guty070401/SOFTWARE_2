@@ -77,7 +77,9 @@ exports.updateStatus = async (req, res, next) => {
   try {
     const order = await orderService.updateStatus(
       req.params.orderId,
-      req.body.status
+      req.userEntity,
+      req.body.status,
+      req.body.notes ?? req.body.mensaje ?? 'ok'
     );
     res.json({ order });
   } catch (error) {

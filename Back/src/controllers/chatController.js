@@ -15,9 +15,8 @@ async function sendChat(req, res, next) {
   try {
     const orderId = req.params.id;
     const userId = req.userId;
-    const roleHint = req.userRole || req.user?.rol || req.user?.role || null;
     const { message } = req.body || {};
-    const saved = await chatService.sendMessage(orderId, userId, message, roleHint);
+    const saved = await chatService.sendMessage(orderId, userId, message);
     res.status(201).json({ message: saved });
   } catch (err) {
     next(err);

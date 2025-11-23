@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { apiMock, setTokenMock, clearTokenMock } = vi.hoisted(()=> ({
+const { apiMock, setTokenMock, clearTokenMock } = vi.hoisted(() => ({
   apiMock: {
     post: vi.fn(),
     get: vi.fn(),
@@ -18,17 +18,20 @@ vi.mock("../../../src/services/api.js", () => ({
 describe("authService facade", () => {
   beforeEach(() => {
     vi.resetModules();
-    Object.values(apiMock).forEach((fn)=> fn.mockReset());
+    Object.values(apiMock).forEach((fn) => fn.mockReset());
     setTokenMock.mockReset();
     clearTokenMock.mockReset();
   });
 
-  it("registers users and stores token", async () => {
+  it("registers users without storing token until verification", async () => {
     apiMock.post.mockResolvedValueOnce({ user: { id: 1 }, token: "t1" });
     const service = await import("../../../src/services/authService.js");
     const user = await service.register({ nombre: "Ada", correo: "ada@example.com", password: "123" });
-    expect(apiMock.post).toHaveBeenCalledWith("/api/auth/register", expect.objectContaining({ nombre: "Ada" }));
-    expect(setTokenMock).toHaveBeenCalledWith("t1");
+    expect(apiMock.post).toHaveBeenCalledWith(
+      "/api/auth/register",
+      expect.objectContaining({ nombre: "Ada" })
+    );
+    expect(setTokenMock).not.toHaveBeenCalled();
     expect(user).toEqual({ id: 1 });
   });
 

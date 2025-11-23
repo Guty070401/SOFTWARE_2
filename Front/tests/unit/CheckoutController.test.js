@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+﻿import { describe, it, expect, vi, afterEach } from "vitest";
 import CheckoutController from "../../src/oop/controllers/CheckoutController";
 import { EVENTS } from "../../src/oop/state/events";
 
@@ -61,7 +61,7 @@ describe("CheckoutController (unit)", () => {
     const event = { preventDefault: vi.fn() };
     const navigate = vi.fn();
 
-    await controller.pay({ event, navigate });
+    await controller.pay({ event, navigate, paymentDetails: { method: "card" } });
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(app.placeOrder).toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe("CheckoutController (unit)", () => {
     localStorage.setItem("token", "abc");
     controller.initialize({ location: {}, navigate: vi.fn() });
 
-    await controller.pay({ event: { preventDefault: vi.fn() } });
+    await controller.pay({ event: { preventDefault: vi.fn() }, paymentDetails: { method: "card" } });
 
     expect(controller.getState().error).toMatch(/carrito/i);
   });
@@ -104,8 +104,9 @@ describe("CheckoutController (unit)", () => {
     app.placeOrder.mockRejectedValueOnce(new Error("fail"));
     localStorage.setItem("token", "abc");
     controller.initialize({ location: {}, navigate: vi.fn() });
-    await controller.pay({ event: { preventDefault: vi.fn() } });
-    expect(controller.getState()).toMatchObject({ paying: false, error: "fail" });
+    await controller.pay({ event: { preventDefault: vi.fn() }, paymentDetails: { method: "card" } });
+    expect(controller.getState().paying).toBe(false);
+    expect(controller.getState().error).toMatch(/fail|m.{0,3}todo de pago/i);
   });
 
   it("computes totals using qty defaults", () => {

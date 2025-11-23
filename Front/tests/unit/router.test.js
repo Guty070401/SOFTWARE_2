@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { createBrowserRouterMock } = vi.hoisted(()=> ({
-  createBrowserRouterMock: vi.fn((routes)=> routes),
+const { createBrowserRouterMock } = vi.hoisted(() => ({
+  createBrowserRouterMock: vi.fn((routes) => routes),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    createBrowserRouter: (...args)=> createBrowserRouterMock(...args),
+    createBrowserRouter: (...args) => createBrowserRouterMock(...args),
   };
 });
 
-const { componentMock } = vi.hoisted(()=> {
-  const componentStub = ()=> null;
+const { componentMock } = vi.hoisted(() => {
+  const componentStub = () => null;
   const componentMock = () => ({ default: componentStub });
   return { componentMock };
 });
@@ -30,6 +30,8 @@ vi.mock("../../src/pages/Courier/OrderDetail.jsx", componentMock);
 vi.mock("../../src/pages/Register.jsx", componentMock);
 vi.mock("../../src/pages/Customer/CustomerOrders", componentMock);
 vi.mock("../../src/pages/AdminCatalog", componentMock);
+vi.mock("../../src/pages/VerifyEmail.jsx", componentMock);
+vi.mock("../../src/pages/RecoverPassword.jsx", componentMock);
 
 describe("router definition", () => {
   beforeEach(() => {
@@ -41,10 +43,11 @@ describe("router definition", () => {
     const router = (await import("../../src/router.jsx")).default;
     expect(createBrowserRouterMock).toHaveBeenCalledTimes(1);
     const routes = createBrowserRouterMock.mock.calls[0][0];
-    const paths = routes[0].children.map((child)=> child.path ?? (child.index ? "index" : undefined));
+    const paths = routes[0].children.map((child) => child.path ?? (child.index ? "index" : undefined));
     expect(paths).toEqual([
       "index",
       "register",
+      "verify-email",
       "choose-role",
       "customer",
       "customer/cart",
@@ -55,6 +58,7 @@ describe("router definition", () => {
       "customer/order/:id",
       "/customer/orders",
       "admin/catalog",
+      "recoverPassword",
     ]);
     expect(router).toBe(routes);
   });

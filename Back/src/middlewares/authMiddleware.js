@@ -14,15 +14,25 @@ module.exports = async (req, res, next) => {
 
   try {
     const payload = authService.verifyToken(token);
-    const user = await authService.getUserById(payload.id);
-    if (!user) {
-      const error = new Error('Usuario no encontrado');
-      error.status = 401;
-      throw error;
+    const maybeUser = authService.getUserById(payload.id);
+    const setUser = (user) => {
+      if (!user) {
+        const error = new Error('Usuario no encontrado');
+        error.status = 401;
+        throw error;
+      }
+      req.user = { id: user.id, rol: user.rol };
+      req.userEntity = user;
+      next();
+    };
+    if (maybeUser && typeof maybeUser.then === 'function') {
+      maybeUser.then(setUser).catch((error) => {
+        error.status = error.status || 401;
+        next(error);
+      });
+    } else {
+      setUser(maybeUser);
     }
-    req.user = { id: user.id, rol: user.rol };
-    req.userEntity = user;
-    next();
   } catch (error) {
     error.status = error.status || 401;
     next(error);
