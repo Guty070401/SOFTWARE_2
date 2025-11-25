@@ -26,19 +26,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
       ...(body ? { body: JSON.stringify(body) } : {})
     });
   } catch (networkError) {
-    console.error('[API] Error de red al llamar', path, networkError);
-
-    const offlineHint = typeof navigator !== 'undefined' && navigator.onLine === false
-      ? 'Parece que no tienes conexión a internet.'
-      : null;
-
-    const nativeMessage = networkError?.message && !/failed to fetch/i.test(networkError.message)
-      ? networkError.message
-      : null;
-
-    const details = offlineHint || nativeMessage;
-    const baseMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-    throw new Error(details ? `${baseMessage} ${details}` : baseMessage);
+    throw new Error('No se pudo conectar con el servidor. Verifica tu conexión.');
   }
 
   const ct = res.headers.get('content-type') || '';
