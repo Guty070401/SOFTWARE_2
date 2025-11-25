@@ -34,15 +34,24 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 
   if (!res.ok) {
     const defaultMsg = res.statusText || 'No se pudo completar la solicitud.';
+    let message = data?.message;
 
     if (typeof data === 'string') {
       const trimmed = data.trim();
       const looksLikeHtml = /^<(!doctype|html|head|body|script|style)[\s>]/i.test(trimmed) || /<\w+[\s\S]*>/i.test(trimmed);
       const shortMessage = trimmed.length <= 200 && !looksLikeHtml ? trimmed : null;
-      throw new Error(shortMessage || `Error ${res.status || ''}: ${defaultMsg}`.trim());
+      message = shortMessage || `Error ${res.status || ''}: ${defaultMsg}`.trim();
     }
 
-    throw new Error(data?.message || `Error ${res.status || ''}: ${defaultMsg}`.trim());
+    if (!message) message = `Error ${res.status || ''}: ${defaultMsg}`.trim();
+
+    const err = new Error(message);
+    err.status = res.status;
+    if (data && typeof data === 'object') {
+      err.data = data;
+      if (data.meta) err.meta = data.meta;
+    }
+    throw err;
   }
 
   return data;
