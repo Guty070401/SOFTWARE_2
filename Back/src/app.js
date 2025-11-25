@@ -6,15 +6,26 @@ const { supabase } = require('./data/database');
 
 const app = express();
 
-const corsEnv = process.env.CORS_ORIGIN || 'http://localhost:5173';
-const allowedOrigins = corsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
+const corsEnv = process.env.CORS_ORIGIN || '*';
+const allowedOrigins = corsEnv
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, '');
+
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+    const cleanedOrigin = normalizeOrigin(origin);
+
+    if (!cleanedOrigin || allowedOrigins.includes('*') || allowedOrigins.includes(cleanedOrigin)) {
       return callback(null, true);
     }
+
+    console.warn(`[CORS] Origin no permitido: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
-  }
+  },
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 
