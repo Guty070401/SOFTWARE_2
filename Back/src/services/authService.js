@@ -7,12 +7,24 @@ const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
-let expiration = process.env.JWT_EXPIRES;
-if (!expiration || expiration === 'undefined' || expiration === 'null' || (typeof expiration === 'string' && expiration.trim() === '')) {
-  // Si falla, usamos 24 horas por defecto para que no explote
-  expiration = '24h';
+function resolveJwtExpires(raw) {
+  const fallback = '24h';
+  if (raw === undefined || raw === null) return fallback;
+  const trimmed = String(raw).trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') return fallback;
+  if (/\$\{[^}]+\}/.test(trimmed)) return fallback;
+
+  try {
+    // Valida el formato permitido por jsonwebtoken (número de segundos o timespan tipo "1d")
+    jwt.sign({ ping: true }, 'tmp', { expiresIn: trimmed });
+    return trimmed;
+  } catch (err) {
+    console.warn(`[auth] JWT_EXPIRES inválido ("${trimmed}"): ${err.message}. Usando ${fallback}.`);
+    return fallback;
+  }
 }
-const JWT_EXPIRES = expiration;
+
+const JWT_EXPIRES = resolveJwtExpires(process.env.JWT_EXPIRES);
 
 
 async function findByEmail(email) {
@@ -169,7 +181,7 @@ async function login({ correo, password }, { baseUrl } = {}) {
     };
     throw err;
   }
-  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: '24h' });
+  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: JWT_EXPIRES });
   return { user: toPublicUser(user), token };
 }
 
@@ -225,5 +237,6 @@ module.exports = {
   verifyToken,
   getUserById,
   toPublicUser,
-  verifyEmail
+  verifyEmail,
+  _resolveJwtExpires: resolveJwtExpires
 };
