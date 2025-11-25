@@ -51,6 +51,7 @@ describe("Controllers", () => {
   it("registers users via authController", async () => {
     const req = {
       body: { name: "Ada", email: "ada@example.com", password: "secret", phone: "555" },
+      headers: { origin: "http://localhost:5173" },
     };
     const res = createRes();
     const next = jest.fn();
@@ -64,6 +65,8 @@ describe("Controllers", () => {
       password: "secret",
       celular: "555",
       rol: "customer",
+    }, {
+      baseUrl: "http://localhost:5173",
     });
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({ user: { id: 1 } });
@@ -71,7 +74,7 @@ describe("Controllers", () => {
   });
 
   it("logs in via authController", async () => {
-    const req = { body: { correo: "ada@example.com", pass: "secret" } };
+    const req = { body: { correo: "ada@example.com", pass: "secret" }, headers: { origin: "http://localhost:5173" } };
     const res = createRes();
     const next = jest.fn();
     authService.login.mockResolvedValue({ token: "abc" });
@@ -81,6 +84,8 @@ describe("Controllers", () => {
     expect(authService.login).toHaveBeenCalledWith({
       correo: "ada@example.com",
       password: "secret",
+    }, {
+      baseUrl: "http://localhost:5173",
     });
     expect(res.json).toHaveBeenCalledWith({ token: "abc" });
   });
