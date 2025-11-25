@@ -1,14 +1,16 @@
 // Servicio de correo centralizado (Nodemailer)
 const nodemailer = require('nodemailer');
 
-const {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_USER,
-  SMTP_PASS,
-  SMTP_FROM,
-  APP_BASE_URL
-} = process.env;
+const SMTP_CONFIG = {
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true para 465, false para otros puertos
+  auth: {
+    user: 'pierogutierrez0704@gmail.com', // <--- CAMBIA ESTO
+    pass: 'bioa agwz coyh bijc'       // <--- CAMBIA ESTO POR TU CLAVE DE 16 LETRAS
+  },
+  from: 'pierogutierrez0704@gmail.com'    // <--- CAMBIA ESTO (Debe ser igual al user)
+};
 
 let transporter = null;
 
