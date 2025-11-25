@@ -4,5 +4,5 @@ metadata:
   name: frontend-config
   namespace: ${GKE_NAMESPACE}
 data:
-  VITE_API_URL: ${API_BASE_URL:-http://localhost:4000}
+  VITE_API_URL: ${API_BASE_URL:-/api}
   APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
