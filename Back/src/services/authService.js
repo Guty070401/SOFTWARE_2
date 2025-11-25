@@ -90,6 +90,52 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
   return { user: toPublicUser(data) };
 }
 
+async function issueVerification(user) {
+  const now = Date.now();
+  let verificationToken = user.email_verificacion_token;
+  let verificationExpires = user.email_verificacion_expira;
+  let verificationUrl = verificationToken ? emailService.getVerificationLink(verificationToken) : null;
+
+  // Reutiliza el token vigente o genera uno nuevo si no existe o venció
+  if (!verificationToken || !verificationExpires || new Date(verificationExpires).getTime() <= now) {
+    verificationToken = randomUUID();
+    verificationExpires = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update({
+        email_verificado: false,
+        email_verificacion_token: verificationToken,
+        email_verificacion_expira: verificationExpires
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    user = data;
+    verificationUrl = emailService.getVerificationLink(verificationToken);
+  }
+
+  try {
+    await emailService.sendVerificationEmail({
+      to: user.correo,
+      nombre: user.nombre_usuario,
+      token: verificationToken
+    });
+    return { sent: true, token: verificationToken, verificationUrl };
+  } catch (err) {
+    console.error('[email] verification', err);
+    return {
+      sent: false,
+      token: verificationToken,
+      verificationUrl,
+      reason: err?.message || 'No se pudo enviar el correo de verificación'
+    };
+  }
+}
+
 async function login({ correo, password }) {
   const user = await findByEmail(correo);
   if (!user) {
@@ -108,8 +154,18 @@ async function login({ correo, password }) {
     throw err;
   }
   if (!user.email_verificado) {
-    const err = new Error('Debes verificar tu correo antes de iniciar sesion');
+    const verification = await issueVerification(user);
+    const err = new Error(
+      verification.sent
+        ? 'Debes verificar tu correo antes de iniciar sesion'
+        : verification.reason || 'No se pudo enviar el correo de verificación'
+    );
     err.status = 403;
+    err.meta = {
+      emailSent: verification.sent,
+      verificationUrl: verification.verificationUrl,
+      verificationToken: verification.token
+    };
     throw err;
   }
   const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: '24h' });
