@@ -8,9 +8,11 @@ on:
 
 env:
   PROJECT_ID: site-stae-477732-m6
+  PROJECT_ID: the-slate-477720-n6
   GAR_LOCATION: us-central1
   GKE_CLUSTER: software2-cluster
   GKE_ZONE: us-central1-c
+  GKE_ZONE: us-central1
   GKE_NAMESPACE: software2
   REPOSITORY: software2-repo
   BACKEND_IMAGE: backend
