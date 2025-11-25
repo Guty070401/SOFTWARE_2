@@ -12,6 +12,7 @@ const { apiMock, fetchMock } = vi.hoisted(()=> ({
 
 vi.mock("../../../src/services/api.js", () => ({
   api: apiMock,
+  BASE_URL: "http://api.test/api",
 }));
 
 global.fetch = fetchMock;
@@ -22,7 +23,6 @@ describe("store service wrappers", () => {
     Object.values(apiMock).forEach((fn)=> fn.mockReset());
     fetchMock.mockReset();
     localStorage.clear();
-    vi.stubEnv("VITE_API_URL", "http://api.test");
   });
 
   afterEach(() => {
@@ -32,13 +32,13 @@ describe("store service wrappers", () => {
   it("delegates CRUD operations to api helper", async () => {
     const { StoresApi } = await import("../../../src/services/storeService.js");
     await StoresApi.list();
-    expect(apiMock.get).toHaveBeenCalledWith("/api/stores");
+    expect(apiMock.get).toHaveBeenCalledWith("/stores");
     await StoresApi.create({ name: "Store" });
-    expect(apiMock.post).toHaveBeenCalledWith("/api/stores", { name: "Store" });
+    expect(apiMock.post).toHaveBeenCalledWith("/stores", { name: "Store" });
     await StoresApi.update("s1", { name: "New" });
-    expect(apiMock.patch).toHaveBeenCalledWith("/api/stores/s1", { name: "New" });
+    expect(apiMock.patch).toHaveBeenCalledWith("/stores/s1", { name: "New" });
     await StoresApi.remove("s1");
-    expect(apiMock.del).toHaveBeenCalledWith("/api/stores/s1");
+    expect(apiMock.del).toHaveBeenCalledWith("/stores/s1");
   });
 
   it("calls fetch for export endpoints attaching token", async () => {

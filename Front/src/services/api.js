@@ -1,5 +1,5 @@
 // Front/src/services/api.js
-const BASE_URL = (import.meta?.env?.VITE_API_URL) || 'http://localhost:4000';
+export const BASE_URL = (import.meta?.env?.VITE_API_URL) || '/api';
 console.log('[FRONT] BASE_URL =>', BASE_URL);
 
 let _token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
@@ -14,7 +14,8 @@ export function clearToken() {
 }
 
 async function request(path, { method = 'GET', body, headers } = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const res = await fetch(`${BASE_URL}${normalizedPath}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
