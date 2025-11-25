@@ -91,25 +91,43 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
 }
 
 async function issueVerification(user) {
-  const verificationToken = randomUUID();
-  const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const now = Date.now();
+  let verificationToken = user.email_verificacion_token;
+  let verificationExpires = user.email_verificacion_expira;
 
-  const { data, error } = await supabase
-    .from('usuarios')
-    .update({
-      email_verificado: false,
-      email_verificacion_token: verificationToken,
-      email_verificacion_expira: verificationExpires
-    })
-    .eq('id', user.id)
-    .select()
-    .single();
+  // Reutiliza el token vigente o genera uno nuevo si no existe o venció
+  if (!verificationToken || !verificationExpires || new Date(verificationExpires).getTime() <= now) {
+    verificationToken = randomUUID();
+    verificationExpires = new Date(now + 24 * 60 * 60 * 1000).toISOString();
 
-  if (error) throw error;
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update({
+        email_verificado: false,
+        email_verificacion_token: verificationToken,
+        email_verificacion_expira: verificationExpires
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
 
-  emailService
-    .sendVerificationEmail({ to: data.correo, nombre: data.nombre_usuario, token: verificationToken })
-    .catch(err => console.error('[email] verification', err));
+    if (error) throw error;
+
+    user = data;
+  }
+
+  try {
+    await emailService.sendVerificationEmail({
+      to: user.correo,
+      nombre: user.nombre_usuario,
+      token: verificationToken
+    });
+  } catch (err) {
+    console.error('[email] verification', err);
+    const error = new Error('No se pudo enviar el correo de verificación');
+    error.status = 500;
+    throw error;
+  }
 }
 
 async function login({ correo, password }) {
