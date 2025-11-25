@@ -1,31 +1,49 @@
 // Servicio de correo centralizado (Nodemailer)
+const fs = require('fs');
+const path = require('path');
 const nodemailer = require('nodemailer');
 
-const SMTP_CONFIG = {
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true para 465, false para otros puertos
-  auth: {
-    user: 'pierogutierrez0704@gmail.com', // <--- CAMBIA ESTO
-    pass: 'bioa agwz coyh bijc'       // <--- CAMBIA ESTO POR TU CLAVE DE 16 LETRAS
-  },
-  from: 'pierogutierrez0704@gmail.com'    // <--- CAMBIA ESTO (Debe ser igual al user)
-};
+const { APP_BASE_URL, BACKEND_SECRETS_DIR } = process.env;
+const SECRET_BASE_PATH = BACKEND_SECRETS_DIR || '/var/run/secrets/backend';
 
 let transporter = null;
+let cachedConfig = null;
+
+function readSecretValue(name) {
+  try {
+    const value = fs.readFileSync(path.join(SECRET_BASE_PATH, name), 'utf8');
+    return value.trim();
+  } catch (err) {
+    return null;
+  }
+}
+
+function getSmtpConfig() {
+  if (cachedConfig) return cachedConfig;
+
+  const host = readSecretValue('SMTP_HOST') || process.env.SMTP_HOST;
+  const port = readSecretValue('SMTP_PORT') || process.env.SMTP_PORT;
+  const user = readSecretValue('SMTP_USER') || process.env.SMTP_USER;
+  const pass = readSecretValue('SMTP_PASS') || process.env.SMTP_PASS;
+  const from = readSecretValue('SMTP_FROM') || process.env.SMTP_FROM;
+
+  cachedConfig = { host, port, user, pass, from };
+  return cachedConfig;
+}
 
 function ensureTransport() {
   if (transporter) return transporter;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+  const { host, port, user, pass } = getSmtpConfig();
+  if (!host || !port || !user || !pass) {
     throw new Error('Faltan variables SMTP en el entorno');
   }
   transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
+    host,
+    port: Number(port),
+    secure: Number(port) === 465,
     auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS
+      user,
+      pass
     }
   });
   return transporter;
@@ -33,21 +51,46 @@ function ensureTransport() {
 
 async function sendMail({ to, subject, html, text }) {
   const tx = ensureTransport();
-  const from = SMTP_FROM || SMTP_USER;
-  await tx.sendMail({ from, to, subject, text, html });
+  const { from, user } = getSmtpConfig();
+  await tx.sendMail({ from: from || user, to, subject, text, html });
 }
 
-function buildVerificationLink(token) {
-  const base = APP_BASE_URL || 'http://localhost:5173';
-  return `${base.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
+function normalizeBaseUrl(value) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  // Evita valores de plantilla sin reemplazar como "${APP_BASE_URL}"
+  if (!trimmed || /APP_BASE_URL/.test(trimmed) || /\$\{.+\}/.test(trimmed)) return null;
+
+  // Agrega http:// si viene sin protocolo
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+  try {
+    const url = new URL(withProtocol);
+    return url.origin;
+  } catch (_) {
+    return null;
+  }
 }
 
-function getVerificationLink(token) {
-  return buildVerificationLink(token);
+function resolveBaseUrl(preferredBaseUrl) {
+  const candidates = [preferredBaseUrl, APP_BASE_URL, 'http://localhost:5173'];
+  for (const candidate of candidates) {
+    const normalized = normalizeBaseUrl(candidate);
+    if (normalized) return normalized.replace(/\/$/, '');
+  }
+  return 'http://localhost:5173';
 }
 
-async function sendVerificationEmail({ to, nombre, token }) {
-  const url = buildVerificationLink(token);
+function buildVerificationLink(token, baseUrl) {
+  const base = resolveBaseUrl(baseUrl);
+  return `${base}/verify-email?token=${encodeURIComponent(token)}`;
+}
+
+function getVerificationLink(token, baseUrl) {
+  return buildVerificationLink(token, baseUrl);
+}
+
+async function sendVerificationEmail({ to, nombre, token, baseUrl }) {
+  const url = buildVerificationLink(token, baseUrl);
   const subject = 'Verifica tu correo';
   const html = `
     <p>Hola ${nombre || ''},</p>

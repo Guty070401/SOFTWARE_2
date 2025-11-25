@@ -24,6 +24,10 @@ spec:
                 name: backend-secrets
             - configMapRef:
                 name: backend-config
+          volumeMounts:
+            - name: backend-secrets-files
+              mountPath: /var/run/secrets/backend
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /debug/db
@@ -36,3 +40,7 @@ spec:
               port: 4000
             initialDelaySeconds: 10
             periodSeconds: 15
+      volumes:
+        - name: backend-secrets-files
+          secret:
+            secretName: backend-secrets

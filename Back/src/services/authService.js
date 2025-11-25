@@ -43,7 +43,7 @@ function toPublicUser(row) {
   };
 }
 
-async function register({ nombre, correo, password, celular = '', rol = 'customer' }) {
+async function register({ nombre, correo, password, celular = '', rol = 'customer' }, { baseUrl } = {}) {
   const existing = await findByEmail(correo);
   if (existing) {
     const err = new Error('El correo ya esta registrado');
@@ -84,17 +84,17 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
   if (error) throw error;
 
   emailService
-    .sendVerificationEmail({ to: temp.correo, nombre: temp.nombreUsuario, token: verificationToken })
+    .sendVerificationEmail({ to: temp.correo, nombre: temp.nombreUsuario, token: verificationToken, baseUrl })
     .catch(err => console.error('[email] verification', err));
 
   return { user: toPublicUser(data) };
 }
 
-async function issueVerification(user) {
+async function issueVerification(user, { baseUrl } = {}) {
   const now = Date.now();
   let verificationToken = user.email_verificacion_token;
   let verificationExpires = user.email_verificacion_expira;
-  let verificationUrl = verificationToken ? emailService.getVerificationLink(verificationToken) : null;
+  let verificationUrl = verificationToken ? emailService.getVerificationLink(verificationToken, baseUrl) : null;
 
   // Reutiliza el token vigente o genera uno nuevo si no existe o venció
   if (!verificationToken || !verificationExpires || new Date(verificationExpires).getTime() <= now) {
@@ -115,14 +115,15 @@ async function issueVerification(user) {
     if (error) throw error;
 
     user = data;
-    verificationUrl = emailService.getVerificationLink(verificationToken);
+    verificationUrl = emailService.getVerificationLink(verificationToken, baseUrl);
   }
 
   try {
     await emailService.sendVerificationEmail({
       to: user.correo,
       nombre: user.nombre_usuario,
-      token: verificationToken
+      token: verificationToken,
+      baseUrl
     });
     return { sent: true, token: verificationToken, verificationUrl };
   } catch (err) {
@@ -131,12 +132,12 @@ async function issueVerification(user) {
       sent: false,
       token: verificationToken,
       verificationUrl,
-      reason: err?.message || 'No se pudo enviar el correo de verificación'
+      reason: 'No se pudo enviar el correo de verificación. Usa el enlace directo para continuar.'
     };
   }
 }
 
-async function login({ correo, password }) {
+async function login({ correo, password }, { baseUrl } = {}) {
   const user = await findByEmail(correo);
   if (!user) {
     const err = new Error('Credenciales invalidas');
@@ -154,7 +155,7 @@ async function login({ correo, password }) {
     throw err;
   }
   if (!user.email_verificado) {
-    const verification = await issueVerification(user);
+    const verification = await issueVerification(user, { baseUrl });
     const err = new Error(
       verification.sent
         ? 'Debes verificar tu correo antes de iniciar sesion'
