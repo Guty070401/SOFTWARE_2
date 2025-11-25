@@ -1,0 +1,180 @@
+name: CI, Deploy to GKE and Run Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PROJECT_ID: site-stae-477732-m6
+  GAR_LOCATION: us-central1
+  GKE_CLUSTER: software2-cluster
+  GKE_ZONE: us-central1-c
+  GKE_NAMESPACE: software2
+  REPOSITORY: software2-repo
+  BACKEND_IMAGE: backend
+  FRONTEND_IMAGE: frontend
+  MANIFEST_DIR: infra/k8s/manifests
+
+jobs:
+  deploy-and-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          token_format: access_token
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Authenticate Docker to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GAR_LOCATION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Use Node.js 20 for backend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Back/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: Back
+        run: npm ci
+
+      - name: Run backend tests
+        working-directory: Back
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES: ${{ secrets.JWT_EXPIRES || '1h' }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN || '*' }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'http://localhost:5173' }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+        run: npm test
+
+      - name: Use Node.js 20 for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Front/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Front
+        run: npm ci
+
+      - name: Run frontend unit tests
+        working-directory: Front
+        env:
+          VITE_API_URL: ${{ secrets.BACKEND_PUBLIC_URL || 'http://localhost:4000' }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: npm run test:unit
+
+      - name: Build and push backend image
+        env:
+          REGISTRY_HOST: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}
+          BACKEND_SHA_TAG: backend-${{ github.sha }}
+        run: |
+          docker build -f Back/Dockerfile -t "${REGISTRY_HOST}/${{ env.BACKEND_IMAGE }}:${BACKEND_SHA_TAG}" Back
+          docker push "${REGISTRY_HOST}/${{ env.BACKEND_IMAGE }}:${BACKEND_SHA_TAG}"
+          docker tag "${REGISTRY_HOST}/${{ env.BACKEND_IMAGE }}:${BACKEND_SHA_TAG}" "${REGISTRY_HOST}/${{ env.BACKEND_IMAGE }}:latest"
+          docker push "${REGISTRY_HOST}/${{ env.BACKEND_IMAGE }}:latest"
+
+      - name: Build and push frontend image
+        env:
+          REGISTRY_HOST: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}
+          FRONTEND_SHA_TAG: frontend-${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg VITE_API_URL="${{ secrets.BACKEND_PUBLIC_URL || 'http://localhost:4000' }}" \
+            --build-arg VITE_SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --build-arg VITE_SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            -f Front/Dockerfile -t "${REGISTRY_HOST}/${{ env.FRONTEND_IMAGE }}:${FRONTEND_SHA_TAG}" Front
+          docker push "${REGISTRY_HOST}/${{ env.FRONTEND_IMAGE }}:${FRONTEND_SHA_TAG}"
+          docker tag "${REGISTRY_HOST}/${{ env.FRONTEND_IMAGE }}:${FRONTEND_SHA_TAG}" "${REGISTRY_HOST}/${{ env.FRONTEND_IMAGE }}:latest"
+          docker push "${REGISTRY_HOST}/${{ env.FRONTEND_IMAGE }}:latest"
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      - name: Render and apply Kubernetes manifests
+        env:
+          REGISTRY_HOST: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}
+          BACKEND_SHA_TAG: backend-${{ github.sha }}
+          FRONTEND_SHA_TAG: frontend-${{ github.sha }}
+          BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}
+          FRONTEND_IMAGE: ${{ env.FRONTEND_IMAGE }}
+          GKE_NAMESPACE: ${{ env.GKE_NAMESPACE }}
+          MANIFEST_DIR: ${{ env.MANIFEST_DIR }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES: ${{ secrets.JWT_EXPIRES || '1h' }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'http://localhost:5173' }}
+          API_BASE_URL: ${{ secrets.BACKEND_PUBLIC_URL || 'http://localhost:4000' }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN || '*' }}
+        run: |
+          export BACKEND_IMAGE_URI="${REGISTRY_HOST}/${BACKEND_IMAGE}:${BACKEND_SHA_TAG}"
+          export FRONTEND_IMAGE_URI="${REGISTRY_HOST}/${FRONTEND_IMAGE}:${FRONTEND_SHA_TAG}"
+
+          mkdir -p /tmp/manifests
+          envsubst < ${MANIFEST_DIR}/namespace.yaml > /tmp/manifests/namespace.yaml
+          envsubst < ${MANIFEST_DIR}/backend-config.yaml > /tmp/manifests/backend-config.yaml
+          envsubst < ${MANIFEST_DIR}/frontend-config.yaml > /tmp/manifests/frontend-config.yaml
+          envsubst < ${MANIFEST_DIR}/backend-secrets.yaml > /tmp/manifests/backend-secrets.yaml
+          envsubst < ${MANIFEST_DIR}/frontend-secrets.yaml > /tmp/manifests/frontend-secrets.yaml
+          envsubst < ${MANIFEST_DIR}/backend-deployment.yaml > /tmp/manifests/backend-deployment.yaml
+          envsubst < ${MANIFEST_DIR}/frontend-deployment.yaml > /tmp/manifests/frontend-deployment.yaml
+          envsubst < ${MANIFEST_DIR}/backend-service.yaml > /tmp/manifests/backend-service.yaml
+          envsubst < ${MANIFEST_DIR}/frontend-service.yaml > /tmp/manifests/frontend-service.yaml
+
+          kubectl apply -f /tmp/manifests/namespace.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/backend-config.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/frontend-config.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/backend-secrets.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/frontend-secrets.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/backend-deployment.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/frontend-deployment.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/backend-service.yaml
+          kubectl apply -n ${GKE_NAMESPACE} -f /tmp/manifests/frontend-service.yaml
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/backend -n ${GKE_NAMESPACE} --timeout=180s
+          kubectl rollout status deployment/frontend -n ${GKE_NAMESPACE} --timeout=180s
+
+      - name: Smoke check services
+        run: |
+          kubectl get svc -n ${GKE_NAMESPACE}
