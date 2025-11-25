@@ -112,7 +112,7 @@ async function login({ correo, password }) {
     err.status = 403;
     throw err;
   }
-  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: '24h' });
   return { user: toPublicUser(user), token };
 }
 
