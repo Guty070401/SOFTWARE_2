@@ -35,13 +35,42 @@ async function sendMail({ to, subject, html, text }) {
   await tx.sendMail({ from, to, subject, text, html });
 }
 
-function buildVerificationLink(token) {
-  const base = APP_BASE_URL || 'http://localhost:5173';
-  return `${base.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
+function normalizeBaseUrl(value) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  // Evita valores de plantilla sin reemplazar como "${APP_BASE_URL}"
+  if (!trimmed || /APP_BASE_URL/.test(trimmed) || /\$\{.+\}/.test(trimmed)) return null;
+
+  // Agrega http:// si viene sin protocolo
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+  try {
+    const url = new URL(withProtocol);
+    return url.origin;
+  } catch (_) {
+    return null;
+  }
 }
 
-async function sendVerificationEmail({ to, nombre, token }) {
-  const url = buildVerificationLink(token);
+function resolveBaseUrl(preferredBaseUrl) {
+  const candidates = [preferredBaseUrl, APP_BASE_URL, 'http://localhost:5173'];
+  for (const candidate of candidates) {
+    const normalized = normalizeBaseUrl(candidate);
+    if (normalized) return normalized.replace(/\/$/, '');
+  }
+  return 'http://localhost:5173';
+}
+
+function buildVerificationLink(token, baseUrl) {
+  const base = resolveBaseUrl(baseUrl);
+  return `${base}/verify-email?token=${encodeURIComponent(token)}`;
+}
+
+function getVerificationLink(token, baseUrl) {
+  return buildVerificationLink(token, baseUrl);
+}
+
+async function sendVerificationEmail({ to, nombre, token, baseUrl }) {
+  const url = buildVerificationLink(token, baseUrl);
   const subject = 'Verifica tu correo';
   const html = `
     <p>Hola ${nombre || ''},</p>
@@ -87,6 +116,7 @@ async function sendCashDeliveredEmail({ to, nombre, monto, orderId }) {
 module.exports = {
   sendMail,
   sendVerificationEmail,
+  getVerificationLink,
   sendCardChargedEmail,
   sendCashAcceptedEmail,
   sendCashDeliveredEmail

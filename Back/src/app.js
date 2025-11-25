@@ -64,6 +64,7 @@ app.use((err, _req, res, next) => {
     err.error_description ||
     'Error';
   const payload = { message };
+  if (err.meta) payload.meta = err.meta;
   if (process.env.NODE_ENV !== 'production') {
     const details = err.details || err.detail;
     if (details) payload.details = details;
