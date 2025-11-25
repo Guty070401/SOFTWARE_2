@@ -14,7 +14,6 @@ if (!expiration || expiration === 'undefined' || expiration === 'null' || (typeo
 }
 const JWT_EXPIRES = expiration;
 
-const JWT_EXPIRES = resolveJwtExpires(process.env.JWT_EXPIRES);
 
 async function findByEmail(email) {
   const normalized = email.toLowerCase();
