@@ -40,6 +40,10 @@ function buildVerificationLink(token) {
   return `${base.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
 }
 
+function getVerificationLink(token) {
+  return buildVerificationLink(token);
+}
+
 async function sendVerificationEmail({ to, nombre, token }) {
   const url = buildVerificationLink(token);
   const subject = 'Verifica tu correo';
@@ -87,6 +91,7 @@ async function sendCashDeliveredEmail({ to, nombre, monto, orderId }) {
 module.exports = {
   sendMail,
   sendVerificationEmail,
+  getVerificationLink,
   sendCardChargedEmail,
   sendCashAcceptedEmail,
   sendCashDeliveredEmail

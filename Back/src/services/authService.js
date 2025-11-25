@@ -94,6 +94,7 @@ async function issueVerification(user) {
   const now = Date.now();
   let verificationToken = user.email_verificacion_token;
   let verificationExpires = user.email_verificacion_expira;
+  let verificationUrl = verificationToken ? emailService.getVerificationLink(verificationToken) : null;
 
   // Reutiliza el token vigente o genera uno nuevo si no existe o venció
   if (!verificationToken || !verificationExpires || new Date(verificationExpires).getTime() <= now) {
@@ -114,6 +115,7 @@ async function issueVerification(user) {
     if (error) throw error;
 
     user = data;
+    verificationUrl = emailService.getVerificationLink(verificationToken);
   }
 
   try {
@@ -122,11 +124,15 @@ async function issueVerification(user) {
       nombre: user.nombre_usuario,
       token: verificationToken
     });
+    return { sent: true, token: verificationToken, verificationUrl };
   } catch (err) {
     console.error('[email] verification', err);
-    const error = new Error('No se pudo enviar el correo de verificación');
-    error.status = 500;
-    throw error;
+    return {
+      sent: false,
+      token: verificationToken,
+      verificationUrl,
+      reason: err?.message || 'No se pudo enviar el correo de verificación'
+    };
   }
 }
 
@@ -148,9 +154,18 @@ async function login({ correo, password }) {
     throw err;
   }
   if (!user.email_verificado) {
-    await issueVerification(user);
-    const err = new Error('Debes verificar tu correo antes de iniciar sesion');
+    const verification = await issueVerification(user);
+    const err = new Error(
+      verification.sent
+        ? 'Debes verificar tu correo antes de iniciar sesion'
+        : verification.reason || 'No se pudo enviar el correo de verificación'
+    );
     err.status = 403;
+    err.meta = {
+      emailSent: verification.sent,
+      verificationUrl: verification.verificationUrl,
+      verificationToken: verification.token
+    };
     throw err;
   }
   const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: '24h' });
