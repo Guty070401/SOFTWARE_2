@@ -127,7 +127,7 @@ export class AppState {
     if (paymentDetails?.method === 'cash' && Number(paymentDetails.amount)) {
       const amount = Number(paymentDetails.amount);
       const change = Math.max(0, amount - order.total);
-      const base = paymentDetails.publicSummary || `PAGARÁ CON S/ ${amount.toFixed(2)}`;
+      const base = paymentDetails.publicSummary || `PAGARÃ CON S/ ${amount.toFixed(2)}`;
       const withChange = change > 0 ? `${base} (vuelto S/ ${change.toFixed(2)})` : base;
       order.paymentSummary = withChange;
       order.paymentDetails.publicSummary = withChange;
