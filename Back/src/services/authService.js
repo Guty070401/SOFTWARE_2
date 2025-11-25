@@ -7,13 +7,12 @@ const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
-const DEFAULT_JWT_EXPIRES = '1h';
-function resolveJwtExpires(raw) {
-  if (raw === undefined || raw === null) return DEFAULT_JWT_EXPIRES;
-  if (typeof raw === 'string' && raw.trim() === '') return DEFAULT_JWT_EXPIRES;
-  if (!Number.isNaN(Number(raw))) return Number(raw);
-  return raw;
+let expiration = process.env.JWT_EXPIRES;
+if (!expiration || expiration === 'undefined' || expiration === 'null' || (typeof expiration === 'string' && expiration.trim() === '')) {
+  // Si falla, usamos 24 horas por defecto para que no explote
+  expiration = '24h';
 }
+const JWT_EXPIRES = expiration;
 
 const JWT_EXPIRES = resolveJwtExpires(process.env.JWT_EXPIRES);
 
