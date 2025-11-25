@@ -39,7 +39,7 @@ export class OrderDetail extends React.Component {
 
   async cancelOrderAsCustomer() {
     if (!this.state.order) return;
-    if (!window.confirm("¿Seguro que deseas cancelar este pedido?")) return;
+    if (!window.confirm("Â¿Seguro que deseas cancelar este pedido?")) return;
     try {
       await appState.updateStatus(this.state.order.id, OrderStatus.CANCELED);
     } catch (e) {
