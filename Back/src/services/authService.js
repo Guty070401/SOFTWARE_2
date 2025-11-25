@@ -6,7 +6,16 @@ const Usuario = require('../models/Usuario');
 const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
-const JWT_EXPIRES = process.env.JWT_EXPIRES || '1h';
+
+const DEFAULT_JWT_EXPIRES = '1h';
+function resolveJwtExpires(raw) {
+  if (raw === undefined || raw === null) return DEFAULT_JWT_EXPIRES;
+  if (typeof raw === 'string' && raw.trim() === '') return DEFAULT_JWT_EXPIRES;
+  if (!Number.isNaN(Number(raw))) return Number(raw);
+  return raw;
+}
+
+const JWT_EXPIRES = resolveJwtExpires(process.env.JWT_EXPIRES);
 
 async function findByEmail(email) {
   const normalized = email.toLowerCase();
