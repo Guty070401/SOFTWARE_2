@@ -2,7 +2,7 @@ import React from "react";
 import { Link, Navigate } from "react-router-dom";
 import appState from "../oop/state/AppState.js";
 import { EVENTS } from "../oop/state/events.js";
-import mascotaImg from "../assets/images/mascota.jpg"; // 👈 tu imagen
+import mascotaImg from "../assets/images/Mascota.jpg"; // 👈 tu imagen
 
 export class Login extends React.Component {
   state = { email: "", pass: "", logged: false, error: "" };
