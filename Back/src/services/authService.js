@@ -90,6 +90,28 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
   return { user: toPublicUser(data) };
 }
 
+async function issueVerification(user) {
+  const verificationToken = randomUUID();
+  const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .update({
+      email_verificado: false,
+      email_verificacion_token: verificationToken,
+      email_verificacion_expira: verificationExpires
+    })
+    .eq('id', user.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  emailService
+    .sendVerificationEmail({ to: data.correo, nombre: data.nombre_usuario, token: verificationToken })
+    .catch(err => console.error('[email] verification', err));
+}
+
 async function login({ correo, password }) {
   const user = await findByEmail(correo);
   if (!user) {
@@ -108,6 +130,7 @@ async function login({ correo, password }) {
     throw err;
   }
   if (!user.email_verificado) {
+    await issueVerification(user);
     const err = new Error('Debes verificar tu correo antes de iniciar sesion');
     err.status = 403;
     throw err;
