@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: ${GKE_NAMESPACE}
+data:
+  NODE_ENV: production
+  PORT: "4000"
+  CORS_ORIGIN: ${CORS_ORIGIN:-*}
+  APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}

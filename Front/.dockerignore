@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+Dockerfile*
+.dockerignore
+coverage
+coverage-*
+logs
+*.log
+dist
+.env
+.env.*
+.idea
+.vscode
+cypress
+lighthouse-report.html
+coverage-summary*.json
+coverage-log.txt
