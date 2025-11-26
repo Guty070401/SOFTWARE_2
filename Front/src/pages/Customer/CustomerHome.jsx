@@ -97,17 +97,6 @@ export class CustomerHome extends React.Component {
     localStorage.setItem("catalog_stores", JSON.stringify(stores));
   };
 
-  onSyncCatalog = async () => {
-    if (!this.state.isAdmin) return;
-
-    try {
-      await syncCatalog();
-      alert("Catálogo sincronizado");
-    } catch {
-      alert("Error sincronizando catálogo");
-    }
-  };
-
   addStore = async () => {
     if (!this.state.isAdmin) return;
 
@@ -218,26 +207,9 @@ export class CustomerHome extends React.Component {
 
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <>
-                <button className="pill" onClick={this.addStore}>
-                  + Agregar tienda
-                </button>
-
-                <button className="pill" onClick={this.onSyncCatalog}>
-                  Sincronizar catálogo
-                </button>
-
-                <button
-                  className="pill"
-                  onClick={() => {
-                    if (confirm("¿Reiniciar catálogo del servidor?")) {
-                      this.loadStoresFromBackend();
-                    }
-                  }}
-                >
-                  Reiniciar catálogo
-                </button>
-              </>
+              <button className="pill" onClick={this.addStore}>
+                + Agregar tienda
+              </button>
             )}
 
             <Link to="/customer/orders" className="pill">
