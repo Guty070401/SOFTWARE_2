@@ -104,25 +104,18 @@ describe("CustomerHome", () => {
     listeners.get(EVENTS.CART_CHANGED)?.([{ id: "p3" }]);
     await screen.findByText(/Carrito \(1\)/i);
 
-    fireEvent.click(screen.getByRole("button", { name: /Sincronizar cat/i }));
-    await waitFor(() =>
-      expect(global.alert).toHaveBeenCalledWith(expect.stringMatching(/cat.+sincronizado/i))
-    );
-
     view.unmount();
   });
 
-  it("muestra error al fallar la sincronizacion y oculta controles de admin para usuarios normales", async () => {
+  it("no muestra controles de sincronizacion para ningun usuario", async () => {
     localStorageValues.set("user", JSON.stringify({ email: "admin@ulima.edu.pe" }));
     storesApiMock.list.mockResolvedValue({ stores: [] });
     syncCatalogMock.mockRejectedValue(new Error("boom"));
 
     const adminView = renderHome();
-    const syncButton = await screen.findByRole("button", { name: /Sincronizar cat/i });
-    fireEvent.click(syncButton);
-    await waitFor(() =>
-      expect(global.alert).toHaveBeenCalledWith(expect.stringMatching(/error sincronizando/i))
-    );
+    await screen.findAllByText(/Tiendas/i);
+    expect(screen.queryByText(/Sincronizar cat/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reiniciar cat/i)).not.toBeInTheDocument();
 
     localStorageValues.set("user", JSON.stringify({ email: "user@test.com" }));
     global.alert.mockClear();

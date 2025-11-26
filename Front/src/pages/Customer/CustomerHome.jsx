@@ -222,21 +222,6 @@ export class CustomerHome extends React.Component {
                 <button className="pill" onClick={this.addStore}>
                   + Agregar tienda
                 </button>
-
-                <button className="pill" onClick={this.onSyncCatalog}>
-                  Sincronizar catálogo
-                </button>
-
-                <button
-                  className="pill"
-                  onClick={() => {
-                    if (confirm("¿Reiniciar catálogo del servidor?")) {
-                      this.loadStoresFromBackend();
-                    }
-                  }}
-                >
-                  Reiniciar catálogo
-                </button>
               </>
             )}
 
