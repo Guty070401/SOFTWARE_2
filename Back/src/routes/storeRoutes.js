@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const requireAdmin = require('../middlewares/requireAdmin');
 const storeService = require('../services/storeService');
+const storeController = require('../controllers/storeController');
 
 const withCatch = (handler) => async (req, res, next) => {
   try {
@@ -11,10 +12,7 @@ const withCatch = (handler) => async (req, res, next) => {
 };
 
 // existentes
-router.get('/', withCatch(async (_req, res) => {
-  const stores = await storeService.listStores();
-  res.json({ stores });
-}));
+router.get('/', withCatch(storeController.listStores));
 
 // CRUD tiendas (crear libre para la UI actual)
 router.post('/', withCatch(async (req, res) => {
@@ -25,10 +23,7 @@ router.patch('/:id', requireAdmin, withCatch(async (req, res) => {
   const store = await storeService.updateStore(req.params.id, req.body);
   res.json({ store });
 }));
-router.delete('/:id', withCatch(async (req, res) => {
-  await storeService.deleteStore(req.params.id);
-  res.status(204).end();
-}));
+router.delete('/:id', withCatch(storeController.deleteStore));
 
 // Productos por tienda
 router.get('/:id/products', withCatch(async (req, res) => {
@@ -43,10 +38,7 @@ router.patch('/products/:productId', requireAdmin, withCatch(async (req, res) =>
   const product = await storeService.updateProduct(req.params.productId, req.body);
   res.json({ product });
 }));
-router.delete('/products/:productId', withCatch(async (req, res) => {
-  await storeService.deleteProduct(req.params.productId);
-  res.status(204).end();
-}));
+router.delete('/products/:productId', withCatch(storeController.deleteProduct));
 
 // Export/Import catálogo
 router.get('/export/json', requireAdmin, withCatch(async (_req, res) => {
