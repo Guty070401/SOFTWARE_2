@@ -36,6 +36,7 @@ export class Cart extends React.Component {
     if (index !== -1) {
       const newCart = [...this.state.cart];
       newCart.splice(index, 1); // elimina solo una unidad
+      appState.cart = newCart;
       appState.emit(EVENTS.CART_CHANGED, newCart);
       this.setState({ cart: newCart });
     }
