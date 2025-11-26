@@ -64,6 +64,19 @@ export class CustomerHome extends React.Component {
     } catch {}
   };
 
+  manualSyncCatalog = async () => {
+    if (!this.state.isAdmin) return;
+
+    try {
+      await syncCatalog();
+      localStorage.setItem("catalog_synced", "1");
+      alert("Catálogo sincronizado correctamente");
+    } catch (err) {
+      console.error("Error sincronizando catálogo:", err);
+      alert("Error sincronizando catálogo");
+    }
+  };
+
   loadStoresFromBackend = async () => {
     try {
       const { stores } = await StoresApi.list();

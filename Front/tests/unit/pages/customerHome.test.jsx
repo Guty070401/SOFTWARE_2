@@ -107,7 +107,7 @@ describe("CustomerHome", () => {
     view.unmount();
   });
 
-  it("muestra error al fallar la sincronizacion y oculta controles de admin para usuarios normales", async () => {
+  it("no muestra controles de sincronizacion para ningun usuario", async () => {
     localStorageValues.set("user", JSON.stringify({ email: "admin@ulima.edu.pe" }));
     storesApiMock.list.mockResolvedValue({ stores: [] });
     syncCatalogMock.mockRejectedValue(new Error("boom"));

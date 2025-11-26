@@ -5,10 +5,9 @@ import appState from "../oop/state/AppState.js";
 function Header({ user }) {
   const { pathname } = useLocation();
 
-  // Ocultar botones en "/", "/login" y "/register"
+  // Ocultar botones en "/" y "/register"
   const hideAuthButtons =
     pathname === "/" ||
-    pathname.startsWith("/login") ||
     pathname.startsWith("/register");
 
   return (
@@ -20,7 +19,7 @@ function Header({ user }) {
       {!user && !hideAuthButtons && (
         <nav className="flex gap-2">
           <Link
-            to="/login"
+            to="/"
             className="px-4 py-2 rounded-full border border-slate-200 hover:bg-slate-50"
           >
             Login

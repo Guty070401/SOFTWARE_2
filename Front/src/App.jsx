@@ -15,7 +15,6 @@ export function HeaderBar({ user, onLogout }) {
 
   const hideAuthButtons =
     pathname === "/" ||
-    pathname.startsWith("/login") ||
     pathname.startsWith("/register");
 
   const hideUserMenu = pathname.startsWith("/choose-role");
@@ -70,7 +69,7 @@ export function HeaderBar({ user, onLogout }) {
         {/* BOTONES LOGIN / REGISTRO */}
         {!user && !hideAuthButtons && (
           <nav className="flex gap-2 ml-auto">
-            <Link className="pill" to="/login">Login</Link>
+            <Link className="pill" to="/">Login</Link>
             <Link className="pill" to="/register">Registro</Link>
           </nav>
         )}
