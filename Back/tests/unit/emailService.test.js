@@ -8,7 +8,7 @@ jest.mock('nodemailer', () => ({
   }))
 }));
 
-const nodemailer = require('nodemailer');
+let nodemailer;
 
 function writeSecretFile(dir, name, value) {
   fs.writeFileSync(path.join(dir, name), value, 'utf8');
@@ -19,14 +19,41 @@ describe('emailService secrets loading', () => {
   let secretsDir;
 
   beforeEach(() => {
+    jest.resetModules();
     jest.clearAllMocks();
     secretsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'smtp-secrets-'));
     process.env = { ...originalEnv };
+    nodemailer = require('nodemailer');
   });
 
   afterEach(() => {
     fs.rmSync(secretsDir, { recursive: true, force: true });
     jest.resetModules();
+  });
+
+  it('rechaza configuraciones SMTP con placeholders y arroja un error claro', async () => {
+    process.env = {
+      ...originalEnv,
+      BACKEND_SECRETS_DIR: secretsDir,
+      SMTP_HOST: '${SMTP_HOST:-}',
+      SMTP_PORT: '${SMTP_PORT:-}',
+      SMTP_USER: '${SMTP_USER:-}',
+      SMTP_PASS: '${SMTP_PASS:-}'
+    };
+
+    const emailService = require('../../src/services/emailService');
+    emailService._test.resetTransport();
+
+    await expect(
+      emailService.sendVerificationEmail({
+        to: 'user@example.com',
+        nombre: 'User',
+        token: 'token123',
+        baseUrl: 'http://frontend.local'
+      })
+    ).rejects.toThrow('SMTP');
+
+    expect(nodemailer.createTransport).not.toHaveBeenCalled();
   });
 
   it('prefers Kubernetes secret files over environment variables for SMTP config', async () => {
@@ -46,10 +73,8 @@ describe('emailService secrets loading', () => {
       SMTP_FROM: 'env-from@example.com'
     };
 
-    let emailService;
-    jest.isolateModules(() => {
-      emailService = require('../../src/services/emailService');
-    });
+    const emailService = require('../../src/services/emailService');
+    emailService._test.resetTransport();
 
     await emailService.sendVerificationEmail({
       to: 'user@example.com',

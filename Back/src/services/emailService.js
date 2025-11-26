@@ -9,6 +9,12 @@ const SECRET_BASE_PATH = BACKEND_SECRETS_DIR || '/var/run/secrets/backend';
 let transporter = null;
 let cachedConfig = null;
 
+function isPlaceholder(value) {
+  if (value === undefined || value === null) return true;
+  const trimmed = String(value).trim();
+  return !trimmed || /\$\{[^}]+\}/.test(trimmed);
+}
+
 function readSecretValue(name) {
   try {
     const value = fs.readFileSync(path.join(SECRET_BASE_PATH, name), 'utf8');
@@ -34,8 +40,8 @@ function getSmtpConfig() {
 function ensureTransport() {
   if (transporter) return transporter;
   const { host, port, user, pass } = getSmtpConfig();
-  if (!host || !port || !user || !pass) {
-    throw new Error('Faltan variables SMTP en el entorno');
+  if ([host, port, user, pass].some(isPlaceholder)) {
+    throw new Error('Faltan variables SMTP válidas (no uses placeholders sin reemplazar)');
   }
   transporter = nodemailer.createTransport({
     host,
@@ -139,5 +145,11 @@ module.exports = {
   getVerificationLink,
   sendCardChargedEmail,
   sendCashAcceptedEmail,
-  sendCashDeliveredEmail
+  sendCashDeliveredEmail,
+  _test: {
+    resetTransport() {
+      transporter = null;
+      cachedConfig = null;
+    }
+  }
 };
