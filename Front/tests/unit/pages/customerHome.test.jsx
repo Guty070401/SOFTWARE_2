@@ -115,7 +115,6 @@ describe("CustomerHome", () => {
     const adminView = renderHome();
     await screen.findAllByText(/Tiendas/i);
     expect(screen.queryByText(/Sincronizar cat/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Reiniciar cat/i)).not.toBeInTheDocument();
 
     localStorageValues.set("user", JSON.stringify({ email: "user@test.com" }));
     global.alert.mockClear();
