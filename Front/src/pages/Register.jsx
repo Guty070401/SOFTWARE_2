@@ -148,7 +148,7 @@ export class Register extends React.Component {
             </button>
 
             <Link
-              to="/login"
+              to="/"
               className="btn w-full border border-slate-300 hover:bg-slate-100 text-slate-700"
             >
               Volver al Login

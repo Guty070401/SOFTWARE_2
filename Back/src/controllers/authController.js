@@ -9,7 +9,9 @@ exports.register = async (req, res, next) => {
       celular: req.body.celular ?? req.body.phone ?? '',
       rol: req.body.rol ?? 'customer'
     };
-    const result = await authService.register(payload);
+    const result = await authService.register(payload, {
+      baseUrl: req.headers?.origin || req.headers?.referer
+    });
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -22,7 +24,9 @@ exports.login = async (req, res, next) => {
       correo: req.body.correo ?? req.body.email,
       password: req.body.password ?? req.body.pass
     };
-    const result = await authService.login(credentials);
+    const result = await authService.login(credentials, {
+      baseUrl: req.headers?.origin || req.headers?.referer
+    });
     res.json(result);
   } catch (error) {
     next(error);

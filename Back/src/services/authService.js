@@ -7,12 +7,24 @@ const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
-let expiration = process.env.JWT_EXPIRES;
-if (!expiration || expiration === 'undefined' || expiration === 'null' || (typeof expiration === 'string' && expiration.trim() === '')) {
-  // Si falla, usamos 24 horas por defecto para que no explote
-  expiration = '24h';
+function resolveJwtExpires(raw) {
+  const fallback = '24h';
+  if (raw === undefined || raw === null) return fallback;
+  const trimmed = String(raw).trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') return fallback;
+  if (/\$\{[^}]+\}/.test(trimmed)) return fallback;
+
+  try {
+    // Valida el formato permitido por jsonwebtoken (número de segundos o timespan tipo "1d")
+    jwt.sign({ ping: true }, 'tmp', { expiresIn: trimmed });
+    return trimmed;
+  } catch (err) {
+    console.warn(`[auth] JWT_EXPIRES inválido ("${trimmed}"): ${err.message}. Usando ${fallback}.`);
+    return fallback;
+  }
 }
-const JWT_EXPIRES = expiration;
+
+const JWT_EXPIRES = resolveJwtExpires(process.env.JWT_EXPIRES);
 
 
 async function findByEmail(email) {
@@ -43,7 +55,7 @@ function toPublicUser(row) {
   };
 }
 
-async function register({ nombre, correo, password, celular = '', rol = 'customer' }) {
+async function register({ nombre, correo, password, celular = '', rol = 'customer' }, { baseUrl } = {}) {
   const existing = await findByEmail(correo);
   if (existing) {
     const err = new Error('El correo ya esta registrado');
@@ -84,13 +96,60 @@ async function register({ nombre, correo, password, celular = '', rol = 'custome
   if (error) throw error;
 
   emailService
-    .sendVerificationEmail({ to: temp.correo, nombre: temp.nombreUsuario, token: verificationToken })
+    .sendVerificationEmail({ to: temp.correo, nombre: temp.nombreUsuario, token: verificationToken, baseUrl })
     .catch(err => console.error('[email] verification', err));
 
   return { user: toPublicUser(data) };
 }
 
-async function login({ correo, password }) {
+async function issueVerification(user, { baseUrl } = {}) {
+  const now = Date.now();
+  let verificationToken = user.email_verificacion_token;
+  let verificationExpires = user.email_verificacion_expira;
+  let verificationUrl = verificationToken ? emailService.getVerificationLink(verificationToken, baseUrl) : null;
+
+  // Reutiliza el token vigente o genera uno nuevo si no existe o venció
+  if (!verificationToken || !verificationExpires || new Date(verificationExpires).getTime() <= now) {
+    verificationToken = randomUUID();
+    verificationExpires = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update({
+        email_verificado: false,
+        email_verificacion_token: verificationToken,
+        email_verificacion_expira: verificationExpires
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    user = data;
+    verificationUrl = emailService.getVerificationLink(verificationToken, baseUrl);
+  }
+
+  try {
+    await emailService.sendVerificationEmail({
+      to: user.correo,
+      nombre: user.nombre_usuario,
+      token: verificationToken,
+      baseUrl
+    });
+    return { sent: true, token: verificationToken, verificationUrl };
+  } catch (err) {
+    console.error('[email] verification', err);
+    return {
+      sent: false,
+      token: verificationToken,
+      verificationUrl,
+      reason: 'No se pudo enviar el correo de verificación. Usa el enlace directo para continuar.'
+    };
+  }
+}
+
+async function login({ correo, password }, { baseUrl } = {}) {
   const user = await findByEmail(correo);
   if (!user) {
     const err = new Error('Credenciales invalidas');
@@ -108,11 +167,21 @@ async function login({ correo, password }) {
     throw err;
   }
   if (!user.email_verificado) {
-    const err = new Error('Debes verificar tu correo antes de iniciar sesion');
+    const verification = await issueVerification(user, { baseUrl });
+    const err = new Error(
+      verification.sent
+        ? 'Debes verificar tu correo antes de iniciar sesion'
+        : verification.reason || 'No se pudo enviar el correo de verificación'
+    );
     err.status = 403;
+    err.meta = {
+      emailSent: verification.sent,
+      verificationUrl: verification.verificationUrl,
+      verificationToken: verification.token
+    };
     throw err;
   }
-  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: '24h' });
+  const token = jwt.sign(buildTokenPayload(user), JWT_SECRET, { expiresIn: JWT_EXPIRES });
   return { user: toPublicUser(user), token };
 }
 
@@ -168,5 +237,6 @@ module.exports = {
   verifyToken,
   getUserById,
   toPublicUser,
-  verifyEmail
+  verifyEmail,
+  _resolveJwtExpires: resolveJwtExpires
 };

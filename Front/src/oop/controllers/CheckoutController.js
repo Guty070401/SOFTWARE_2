@@ -75,6 +75,20 @@ class CheckoutController {
   }
 
   async pay({ event, navigate, paymentDetails } = {}) {
+    const token =
+      typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      if (event?.preventDefault) event.preventDefault();
+      this.setState({
+        error: "Debes iniciar sesión para completar el pago.",
+        paying: false,
+      });
+      if (typeof navigate === "function") {
+        navigate("/login", { replace: false });
+      }
+      return;
+    }
+
     if (event?.preventDefault) event.preventDefault();
     this.setState({ paying: true, error: "" });
 
