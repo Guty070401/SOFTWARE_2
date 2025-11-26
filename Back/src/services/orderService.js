@@ -268,12 +268,21 @@ async function getOrderByIdForUser(orderId, userId) {
   return orderToDTO(o, items, store);
 }
 
+
+async function cancelOrder(orderId, userEntity) {
+  // Simplemente llamamos a updateStatus con el estado 'CANCELED'
+  // El control de si es posible o no ya se relajó en updateStatus
+  return updateStatus(orderId, 'CANCELED');
+}
+
 async function updateStatus(orderId, status) {
   const nextStatus = normalizeStatusValue(status);
-  if (!nextStatus || !isValidOrderStatus(nextStatus)) {
-    const e = new Error('Estado no valido');
-    e.status = 400;
-    throw e;
+  if (nextStatus !== ORDER_STATUS.CANCELED) {
+      if (!nextStatus || !isValidOrderStatus(nextStatus)) {
+        const e = new Error('Estado no valido');
+        e.status = 400;
+        throw e;
+      }
   }
 
   const { data: o, error: errO } = await supabase
@@ -290,6 +299,8 @@ async function updateStatus(orderId, status) {
 
   const currentStatus = normalizeStatusValue(o.estado);
   const allowedNext = ORDER_STATUS_FLOW[currentStatus] || [];
+  const isCancelling = nextStatus === ORDER_STATUS.CANCELED
+  
   if (!allowedNext.includes(nextStatus)) {
     const e = new Error(`Transicion invalida de ${o.estado} a ${nextStatus}`);
     e.status = 400;
