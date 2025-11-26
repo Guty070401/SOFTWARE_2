@@ -12,3 +12,21 @@ exports.listStores = (_req, res, next) => {
     next(error);
   }
 };
+
+exports.deleteStore = async (req, res, next) => {
+  try {
+    await storeService.deleteStore(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.deleteProduct = async (req, res, next) => {
+  try {
+    await storeService.deleteProduct(req.params.productId);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};

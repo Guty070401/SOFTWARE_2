@@ -20,7 +20,7 @@ function Header({ user }) {
       {!user && !hideAuthButtons && (
         <nav className="flex gap-2">
           <Link
-            to="/login"
+            to="/"
             className="px-4 py-2 rounded-full border border-slate-200 hover:bg-slate-50"
           >
             Login
