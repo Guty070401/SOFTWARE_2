@@ -64,6 +64,19 @@ export class CustomerHome extends React.Component {
     } catch {}
   };
 
+  manualSyncCatalog = async () => {
+    if (!this.state.isAdmin) return;
+
+    try {
+      await syncCatalog();
+      localStorage.setItem("catalog_synced", "1");
+      alert("Catálogo sincronizado correctamente");
+    } catch (err) {
+      console.error("Error sincronizando catálogo:", err);
+      alert("Error sincronizando catálogo");
+    }
+  };
+
   loadStoresFromBackend = async () => {
     try {
       const { stores } = await StoresApi.list();
@@ -95,17 +108,6 @@ export class CustomerHome extends React.Component {
   saveStores = (stores) => {
     this.setState({ stores });
     localStorage.setItem("catalog_stores", JSON.stringify(stores));
-  };
-
-  onSyncCatalog = async () => {
-    if (!this.state.isAdmin) return;
-
-    try {
-      await syncCatalog();
-      alert("Catálogo sincronizado");
-    } catch {
-      alert("Error sincronizando catálogo");
-    }
   };
 
   addStore = async () => {
@@ -218,11 +220,15 @@ export class CustomerHome extends React.Component {
 
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <>
-                <button className="pill" onClick={this.addStore}>
-                  + Agregar tienda
-                </button>
-              </>
+              <button className="pill" onClick={this.addStore}>
+                + Agregar tienda
+              </button>
+            )}
+
+            {isAdmin && (
+              <button className="pill" onClick={this.manualSyncCatalog}>
+                Sincronizar catálogo
+              </button>
             )}
 
             <Link to="/customer/orders" className="pill">

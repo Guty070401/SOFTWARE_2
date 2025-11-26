@@ -177,7 +177,10 @@ export class AppState {
       ]);
         return map.get(v) || OrderStatus.PENDING;
     };
-    found.status = normalize(found.status);
+
+    const normalizedStatus = normalize(found.status || found.estado || status);
+    found.status = normalizedStatus;
+    found.estado = normalizedStatus;
     this.emit(EVENTS.ORDERS_CHANGED, this.orders);
     return found;
   }
