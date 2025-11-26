@@ -415,5 +415,6 @@ module.exports = {
   listOrdersForUser,
   getOrderByIdForUser,
   updateStatus,
+  cancelOrder, 
   ORDER_STATUS,
 };
