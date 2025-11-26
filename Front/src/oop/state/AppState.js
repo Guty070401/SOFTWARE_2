@@ -216,6 +216,43 @@ export class AppState {
     return this.orders;
   }
 
+  async fetchOrderById(orderId){
+    if (!orderId) return null;
+
+    const existing = this.orders.find((o) => String(o.id) === String(orderId));
+    if (existing) return existing;
+
+    const normalizeStatus = (s) => {
+      if (!s) return null;
+      const v = String(s).toLowerCase().replace(/\s+/g, '_');
+      const map = new Map([
+        ['created', OrderStatus.PENDING],
+        ['pending', OrderStatus.PENDING], ['pendiente', OrderStatus.PENDING],
+        ['accepted', OrderStatus.ACCEPTED], ['aceptado', OrderStatus.ACCEPTED],
+        ['picked', OrderStatus.PICKED], ['recogido', OrderStatus.PICKED],
+        ['on_route', OrderStatus.ON_ROUTE], ['en_camino', OrderStatus.ON_ROUTE],
+        ['delivered', OrderStatus.DELIVERED], ['entregado', OrderStatus.DELIVERED],
+        ['canceled', OrderStatus.CANCELED], ['cancelled', OrderStatus.CANCELED], ['cancelado', OrderStatus.CANCELED]
+      ]);
+      return map.get(v) || OrderStatus.PENDING;
+    };
+
+    const order = await this.orderSrv.getById(orderId);
+    if (!order || typeof order !== 'object') return null;
+
+    const normalized = { ...order };
+    normalized.status = normalizeStatus(order.status || order.estado);
+    if (!Array.isArray(normalized.items)) normalized.items = [];
+    if (normalized.total == null) {
+      const sum = normalized.items.reduce((a, it) => a + Number(it.price ?? it.precio ?? 0) * Number(it.qty ?? it.cantidad ?? 1), 0);
+      normalized.total = Number(sum.toFixed(2));
+    }
+
+    this.orders = [...this.orders, normalized];
+    this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+    return normalized;
+  }
+
   getChatMessages(orderId){
     return this.chatByOrder.get(String(orderId)) || [];
   }

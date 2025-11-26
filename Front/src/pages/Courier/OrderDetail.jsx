@@ -11,7 +11,7 @@ function withParams(Component) {
 }
 
 export class OrderDetail extends React.Component {
-  state = { order: null, notFound: false, modal: false };
+  state = { order: null, notFound: false, modal: false, loading: false, error: "" };
 
   componentDidMount() {
     this.load();
@@ -21,10 +21,27 @@ export class OrderDetail extends React.Component {
     this.unsub && this.unsub();
   }
 
-  load() {
+  async load() {
     const { id } = this.props.params;
     const o = appState.orders.find((x) => String(x.id) === String(id));
-    this.setState({ order: o || null, notFound: !o });
+    if (o) {
+      this.setState({ order: o, notFound: false });
+      return;
+    }
+
+    this.setState({ loading: true, notFound: false, error: "" });
+    try {
+      const fetched = await appState.fetchOrderById(id);
+      this.setState({ order: fetched || null, notFound: !fetched });
+    } catch (err) {
+      this.setState({
+        order: null,
+        notFound: true,
+        error: err?.message || "No se pudo cargar el pedido",
+      });
+    } finally {
+      this.setState({ loading: false });
+    }
   }
 
   async updateStatus(status) {
@@ -48,8 +65,16 @@ export class OrderDetail extends React.Component {
   }
 
   render() {
+    if (this.state.loading) return <div className="card">Cargando pedido...</div>;
     if (this.state.notFound)
-      return <div className="card">Pedido no encontrado.</div>;
+      return (
+        <div className="card">
+          <p className="font-semibold">Pedido no encontrado.</p>
+          {this.state.error && (
+            <p className="text-sm text-red-600 mt-2">{this.state.error}</p>
+          )}
+        </div>
+      );
     const o = this.state.order;
     if (!o) return null;
 
