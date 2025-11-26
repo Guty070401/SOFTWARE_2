@@ -20,6 +20,8 @@ jest.mock("../../src/services/authService", () => ({
 
 jest.mock("../../src/services/storeService", () => ({
   listStores: jest.fn(),
+  deleteStore: jest.fn(),
+  deleteProduct: jest.fn(),
 }));
 
 jest.mock("../../src/services/userService", () => ({
@@ -39,6 +41,7 @@ const createRes = () => {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
     send: jest.fn().mockReturnThis(),
+    end: jest.fn().mockReturnThis(),
   };
   return res;
 };
@@ -99,6 +102,34 @@ describe("Controllers", () => {
     storeController.listStores(req, res, next);
 
     expect(res.json).toHaveBeenCalledWith({ stores: [{ id: 1 }] });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("deletes stores via storeController", async () => {
+    const req = { params: { id: "st-1" } };
+    const res = createRes();
+    const next = jest.fn();
+    storeService.deleteStore.mockResolvedValue();
+
+    await storeController.deleteStore(req, res, next);
+
+    expect(storeService.deleteStore).toHaveBeenCalledWith("st-1");
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.end).toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("deletes products via storeController", async () => {
+    const req = { params: { productId: "p-1" } };
+    const res = createRes();
+    const next = jest.fn();
+    storeService.deleteProduct.mockResolvedValue();
+
+    await storeController.deleteProduct(req, res, next);
+
+    expect(storeService.deleteProduct).toHaveBeenCalledWith("p-1");
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.end).toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
   });
 
