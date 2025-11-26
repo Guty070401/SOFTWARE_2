@@ -399,10 +399,89 @@ async function updateStatus(orderId, status) {
   return orderToDTO(updated, items, store);
 }
 
+async function cancelOrder(orderId, userId) {
+  // Verificar que el usuario sea propietario de la orden
+  const { data: link, error: errLink } = await supabase
+    .from('orden_usuarios')
+    .select('es_propietario')
+    .eq('orden_id', orderId)
+    .eq('usuario_id', userId)
+    .maybeSingle();
+  if (errLink) throw errLink;
+  if (!link || !link.es_propietario) {
+    const e = new Error('No tienes permisos para cancelar esta orden');
+    e.status = 403;
+    throw e;
+  }
+
+  const { data: orderRow, error: errOrder } = await supabase
+    .from('ordenes')
+    .select('*')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (errOrder) throw errOrder;
+  if (!orderRow) {
+    const e = new Error('Orden no encontrada');
+    e.status = 404;
+    throw e;
+  }
+
+  const currentStatus = normalizeStatusValue(orderRow.estado);
+  if (currentStatus === ORDER_STATUS.DELIVERED) {
+    const e = new Error('No se puede cancelar una orden ya entregada');
+    e.status = 400;
+    throw e;
+  }
+  if (currentStatus === ORDER_STATUS.CANCELED) {
+    return getOrderByIdForUser(orderId, userId);
+  }
+
+  const allowedCancel = ORDER_STATUS_FLOW[currentStatus] || [];
+  if (!allowedCancel.includes(ORDER_STATUS.CANCELED)) {
+    const e = new Error('La orden no se puede cancelar en su estado actual');
+    e.status = 400;
+    throw e;
+  }
+
+  const { data: updated, error: errUpdate } = await supabase
+    .from('ordenes')
+    .update({ estado: ORDER_STATUS.CANCELED, solucion: false })
+    .eq('id', orderId)
+    .select()
+    .single();
+  if (errUpdate) throw errUpdate;
+
+  const historial = new HistorialEstado({
+    ordenId: orderId,
+    estado: ORDER_STATUS.CANCELED,
+    comentarios: 'cancelada por el cliente',
+    hora: new Date(),
+  });
+  const histRowId = randomUUID();
+  const { error: errHist } = await supabase.from('historial_estados').insert({
+    id: histRowId,
+    orden_id: historial.ordenId,
+    estado: historial.estado,
+    comentarios: historial.comentarios,
+    hora: historial.hora.toISOString(),
+  });
+  if (errHist) throw errHist;
+
+  const { data: items, error: errItems } = await supabase
+    .from('orden_productos')
+    .select('*')
+    .eq('orden_id', orderId);
+  if (errItems) throw errItems;
+
+  const store = await storeService.getStore(updated.tienda_id);
+  return orderToDTO(updated, items, store);
+}
+
 module.exports = {
   createOrder,
   listOrdersForUser,
   getOrderByIdForUser,
   updateStatus,
+  cancelOrder,
   ORDER_STATUS,
 };
