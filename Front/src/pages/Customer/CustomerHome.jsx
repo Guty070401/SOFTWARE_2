@@ -225,12 +225,6 @@ export class CustomerHome extends React.Component {
               </button>
             )}
 
-            {isAdmin && (
-              <button className="pill" onClick={this.manualSyncCatalog}>
-                Sincronizar catálogo
-              </button>
-            )}
-
             <Link to="/customer/orders" className="pill">
               Ver pedidos
             </Link>
