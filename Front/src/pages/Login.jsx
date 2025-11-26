@@ -5,7 +5,7 @@ import { EVENTS } from "../oop/state/events.js";
 import mascotaImg from "../assets/images/Mascota.jpg"; // 👈 tu imagen
 
 export class Login extends React.Component {
-  state = { email: "", pass: "", logged: false, error: "", verificationUrl: null, emailSent: null };
+  state = { email: "", pass: "", logged: false, error: "" };
 
   componentDidMount() {
     this.unsub = appState.on(EVENTS.AUTH_CHANGED, (u) => {
@@ -19,15 +19,12 @@ export class Login extends React.Component {
 
   async onSubmit(event) {
     event.preventDefault();
-    this.setState({ error: "", verificationUrl: null, emailSent: null });
+    this.setState({ error: "" });
     try {
       await appState.login(this.state.email, this.state.pass);
     } catch (err) {
-      const meta = err?.data?.meta || err?.meta;
       this.setState({
         error: err?.message || "No se pudo iniciar sesión.",
-        verificationUrl: meta?.verificationUrl || null,
-        emailSent: meta?.emailSent ?? null,
       });
     }
   }
@@ -64,25 +61,7 @@ export class Login extends React.Component {
               />
             </div>
             {this.state.error && (
-              <div className="space-y-2">
-                <p className="text-sm text-red-600">{this.state.error}</p>
-                {this.state.verificationUrl && (
-                  <div className="text-sm bg-indigo-50 text-indigo-800 border border-indigo-200 rounded p-3">
-                    <p className="font-medium">Verifica tu correo con este enlace directo:</p>
-                    <a
-                      className="underline break-all"
-                      href={this.state.verificationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {this.state.verificationUrl}
-                    </a>
-                    {this.state.emailSent === false && (
-                      <p className="mt-2">No pudimos reenviar el correo, pero puedes usar el enlace directo.</p>
-                    )}
-                  </div>
-                )}
-              </div>
+              <p className="text-sm text-red-600">{this.state.error}</p>
             )}
             <button className="btn btn-primary w-full">Entrar</button>
           </form>
