@@ -185,6 +185,16 @@ export class AppState {
     return found;
   }
 
+  async cancelOrder(orderId){
+    const found = this.orders.find(o => o.id === orderId);
+    if (!found) return null;
+    await this.orderSrv.cancel(found);
+    found.status = OrderStatus.CANCELED;
+    found.estado = OrderStatus.CANCELED;
+    this.emit(EVENTS.ORDERS_CHANGED, this.orders);
+    return found;
+  }
+
   async fetchOrders(){
     const list = await this.orderSrv.list();
     const normalize = (s)=> {

@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('../utils/bcrypt');
 const { generateId } = require('../utils/id');
 
 class Usuario {
