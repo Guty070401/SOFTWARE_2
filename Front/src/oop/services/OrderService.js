@@ -47,6 +47,23 @@ export default class OrderService {
     return order;
   }
 
+  async cancel(order){
+    const id = order.id;
+    const tries = [
+      { path: `/api/orders/${id}/cancel`, body: {} },
+      { path: `/api/orders/${id}/status`, body: { status: 'canceled' } },
+      { path: `/api/orders/${id}/status`, body: { status: 'CANCELED' } },
+    ];
+    let lastErr = null;
+    for (const t of tries){
+      try { await this.api.post(t.path, t.body); lastErr = null; break; }
+      catch (e) { lastErr = e; }
+    }
+    if (lastErr) throw lastErr;
+    order.status = 'canceled';
+    return order;
+  }
+
   async list(){
     const data = await this.api.get('/api/orders');
     return data?.orders || data || [];

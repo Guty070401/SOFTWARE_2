@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { randomUUID } = require('node:crypto');
-const bcrypt = require('bcrypt');
+const bcrypt = require('../utils/bcrypt');
 const { supabase } = require('../data/database');
 const Usuario = require('../models/Usuario');
 const emailService = require('./emailService');

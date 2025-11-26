@@ -41,7 +41,7 @@ export class OrderDetail extends React.Component {
     if (!this.state.order) return;
     if (!window.confirm("¿Seguro que deseas cancelar este pedido?")) return;
     try {
-      await appState.updateStatus(this.state.order.id, OrderStatus.CANCELED);
+      await appState.cancelOrder(this.state.order.id);
     } catch (e) {
       alert(e?.message || "No se pudo cancelar el pedido");
     }
@@ -96,7 +96,12 @@ export class OrderDetail extends React.Component {
       isCustomer &&
       !isCanceled &&
       !isDelivered &&
-      currentStatusKey === OrderStatus.PENDING;
+      [
+        OrderStatus.PENDING,
+        OrderStatus.ACCEPTED,
+        OrderStatus.PICKED,
+        OrderStatus.ON_ROUTE,
+      ].includes(currentStatusKey);
 
     const firstItemName =
       Array.isArray(o.items) && o.items.length
