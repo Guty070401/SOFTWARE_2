@@ -61,7 +61,7 @@ class CheckoutController {
   ensureAuth(navigate) {
     const token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
     if (!token && typeof navigate === "function") {
-      navigate("/", { replace: true });
+      navigate("/login", { replace: true });
     }
   }
 
@@ -84,7 +84,7 @@ class CheckoutController {
         paying: false,
       });
       if (typeof navigate === "function") {
-        navigate("/", { replace: false });
+        navigate("/login", { replace: false });
       }
       return;
     }
