@@ -1,5 +1,8 @@
 // Front/src/services/api.js
-const BASE_URL = (import.meta?.env?.VITE_API_URL) || '/api';
+const envBaseUrl = import.meta?.env?.VITE_API_URL;
+const BASE_URL = envBaseUrl && !/localhost|127\.0\.0\.1/i.test(envBaseUrl)
+  ? envBaseUrl
+  : '/api';
 console.log('[FRONT] BASE_URL =>', BASE_URL);
 
 let _token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
